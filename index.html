@@ -95,6 +95,11 @@
     text-transform: uppercase; letter-spacing: .8px; }
   .btn:hover:not(:disabled) { background: rgba(181,131,79,.3); border-color: rgba(120,92,58,.5); }
   .btn:disabled { opacity: .32; cursor: not-allowed; }
+  /* `display` on a class outranks the browser's own rule for the hidden
+     attribute, so setting el.hidden on one of these did nothing and Skip sat
+     on the finished training card offering to skip what had just been done.
+     The same patch exists on .half and .linkwarn further down. */
+  button[hidden] { display: none; }
   .btn.gold { border-color: rgba(207,138,36,.5); color: #7a4e0c; background: rgba(207,138,36,.16); }
   .btn.gold:hover:not(:disabled) { background: rgba(207,138,36,.3); }
   .btn.good { border-color: rgba(93,156,65,.5); color: #345e22; background: rgba(93,156,65,.16); }
@@ -1471,24 +1476,58 @@ const I18N = {
     tu2_d: 'Press <b>SPACE</b> or hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
     tu2_d_touch: 'Hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
     tu3_t: 'Aim it',
-    tu3_d: 'Hold the <b>left mouse button</b> and drag it along the line, or use <b>A</b> / <b>D</b>. <b>W</b> turns it, <b>S</b> brings it down faster, <b>C</b> puts it in store for later. The dashed circle is how far that building can reach.',
-    tu3_d_touch: 'Drag your finger across the field and the section follows it. <b>Tap the field</b> to turn it, <b>hold</b> to bring it down faster, <b>flick up</b> to put it in store for later. The row of buttons under the field does all of that too. The dashed circle is how far that building can reach.',
+    tu3_d: 'Hold the <b>left mouse button</b> and drag it along the line, or use <b>A</b> / <b>D</b>. <b>W</b> turns it. The dashed circle is how far that building can reach.',
+    tu3_d_touch: 'Drag your finger across the field and the section follows it. <b>Tap the field</b> to turn it. The dashed circle is how far that building can reach.',
+    tu_store_t: 'Keep one back',
+    tu_store_d: 'The section in your hands is not always the one the wall needs. <b>C</b> puts it in store and hands you the next one. Press it again and the two swap.',
+    tu_store_d_touch: '<b>Flick up</b> on the field, or hit <b>Store</b>, and the section goes aside for later. Do it again and the stored one comes back.',
     tu4_t: 'Set it down',
     tu4_d: 'Press <b>SPACE</b> again and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
     tu4_d_touch: '<b>Flick down</b> on the field, or hit <b>Slam</b>, and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
     tu5_t: 'Make a wall',
     tu5_d: 'Keep building. Buildings block the walkers as well as shoot them, so a solid front row is armour and firepower at once. Set down three more.',
     tu6_t: 'Close a row',
-    tu6_d: 'Fill a row all the way across the ten columns and it closes: a shockwave knocks down every machine on the field, you get stock, and you keep <b>SALVAGE</b> that strengthens every building you have and every one you will raise. The row itself is spent \u2014 those buildings are gone and the stack drops onto the gap, so close a row you can afford to lose.',
+    tu6_d: 'Fill a row all the way across the ten columns and it closes: a shockwave knocks down every machine on the field. The row is spent doing it, so those buildings are gone and the stack drops onto the gap. Close a row you can afford to lose.',
+    tu_salvage_t: 'What a closed row leaves',
+    tu_salvage_d: 'A closed row pays stock once, and it pays <b>salvage</b> for good. Salvage raises the health and damage of every building you have and every one you raise after it. It is the only number here that never goes down.',
     tu7_t: 'Watch the load line',
     tu7_d: 'The dashed red line is what the ground will bear. Anything stacked above it splits and collapses on its own. Build wide, not tall.',
-    tu8_t: 'Mending and rewards',
-    tu8_d: 'Something got through and the Heart is down. Press <b>R</b> to spend stock on it \u2014 the heal costs more each time you use it in a wave. When you are ready, <b>ENTER</b> calls the next wave early, and the sooner you call it the bigger the payout.',
-    tu8_d_touch: 'Something got through and the Heart is down. Hit <b>Heal</b> to spend stock on it, and the heal costs more each time you use it in a wave. When you are ready, <b>tap the wave bar</b> to call the next wave early, and the sooner you call it the bigger the payout.',
-    tu8b_t: 'The wall is not free',
-    tu8b_d: 'Buildings <b>wear down</b> while a wave is fighting and cost <b>upkeep</b> in stock when it ends, go unpaid and they take damage instead. <b>Salvage</b> from closing rows permanently raises every building\'s health and damage, that is what keeps you ahead of both.',
+    tu8_t: 'Mend the Heart',
+    tu8_d: 'Something got through and the Heart is down. Press <b>R</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
+    tu8_d_touch: 'Something got through and the Heart is down. Hit <b>Heal</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
+    tu_call_t: 'Call them early',
+    tu_call_d: 'The bar above the field counts down to the next wave. <b>ENTER</b> calls it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
+    tu_call_d_touch: 'The bar above the field counts down to the next wave. <b>Tap the bar</b> to call it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
     tu9_t: 'Here they come',
-    tu9_d: 'One practice wave. Your buildings shoot on their own: your job is to keep building and keep the wall closed. Hold it and training is done.',
+    tu9_d: 'Your buildings aim and fire on their own. The wall is your job: keep building, and keep it closed.',
+    tu_bell_t: 'The bell',
+    tu_bell_d: '<b>Bell</b> hits every machine on the field at once, shoves them back a step and throws their aim off. It costs no stock and takes 24 seconds to come back. Ring it.',
+    tu_rally_t: 'The horn',
+    tu_rally_d: '<b>Rally</b> has everyone working the cranks twice as fast for a few seconds. Also free, and thirty seconds to come back. Keep it for the moment the front row is about to go.',
+    tu_mend_t: 'Patch the wall',
+    tu_mend_d: 'Buildings wear down while a wave is breaking on them. <b>Mend wall</b> puts all of them back to full for stock, and the price follows how much damage there is to undo.',
+    tu_held_t: 'Hold it',
+    tu_held_d: 'Keep the wall closed until the last machine is down.',
+    tu_upkeep_t: 'The wall sends a bill',
+    tu_upkeep_d: 'Every wave you hold ends with <b>upkeep</b>. The wall charges you stock simply for standing there, and it charges more the further you get. Come up short and the buildings take the difference out of their own health.',
+    tu_hoard_t: 'Sitting on stock costs too',
+    tu_hoard_d: 'The bill is the larger of two numbers: what your wall costs, and a quarter of whatever stock you are sitting on. A full purse is taxed like a long wall, so put it into building instead of saving it for later.',
+    tu_cards_t: 'Pick one',
+    tu_cards_d: 'A held wave ends with three cards and you take one of them. Each card says what it will do to your own numbers before you commit, so read the line along the bottom. Some of them ask for something back.',
+    tu_bell_t: 'The bell',
+    tu_bell_d: '<b>Bell</b> hits every machine on the field at once, shoves them back a step and throws their aim off. It costs no stock and takes 24 seconds to come back. Ring it.',
+    tu_rally_t: 'The horn',
+    tu_rally_d: '<b>Rally</b> has everyone working the cranks twice as fast for a few seconds. Also free, and thirty seconds to come back. Keep it for the moment the front row is about to go.',
+    tu_mend_t: 'Patch the wall',
+    tu_mend_d: 'Buildings wear down while a wave is breaking on them. <b>Mend wall</b> puts all of them back to full for stock, and the price follows how much damage there is to undo.',
+    tu_held_t: 'Hold it',
+    tu_held_d: 'Keep the wall closed until the last machine is down.',
+    tu_upkeep_t: 'The wall sends a bill',
+    tu_upkeep_d: 'Every wave you hold ends with <b>upkeep</b>. The wall charges you stock simply for standing there, and it charges more the further you get. Come up short and the buildings take the difference out of their own health.',
+    tu_hoard_t: 'Sitting on stock costs too',
+    tu_hoard_d: 'The bill is the larger of two numbers: what your wall costs, and a quarter of whatever stock you are sitting on. A full purse is taxed like a long wall, so put it into building instead of saving it for later.',
+    tu_cards_t: 'Pick one',
+    tu_cards_d: 'A held wave ends with three cards and you take one of them. Each card says what it will do to your own numbers before you commit, so read the line along the bottom. Some of them ask for something back.',
     /* ---- online: accounts, rooms, and the two-field race ---- */
     m_online: 'Versus', m_onlineSub: 'Same seed, two fields, one long night',
     on_title: 'Versus',
@@ -1695,24 +1734,58 @@ const I18N = {
     tu2_d: '\u041d\u0430\u0436\u043c\u0438 <b>\u041f\u0420\u041e\u0411\u0415\u041b</b> \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
     tu2_d_touch: '\u0416\u043c\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
     tu3_t: '\u041d\u0430\u0432\u0435\u0434\u0438',
-    tu3_d: 'Зажми <b>левую кнопку мыши</b> и веди секцию вдоль линии, или жми <b>A</b> / <b>D</b>. <b>W</b> повернёт, <b>S</b> опустит быстрее, <b>C</b> уберёт секцию в запас на потом. Пунктирный круг: насколько далеко эта постройка достаёт.',
-    tu3_d_touch: 'Веди пальцем по полю, и секция идёт за ним. <b>Тап по полю</b> повернёт её, <b>удержание</b> опустит быстрее, <b>свайп вверх</b> уберёт в запас на потом. Ряд кнопок под полем делает всё то же самое. Пунктирный круг: насколько далеко эта постройка достаёт.',
+    tu3_d: 'Зажми <b>левую кнопку мыши</b> и веди секцию вдоль линии, или жми <b>A</b> / <b>D</b>. <b>W</b> повернёт. Пунктирный круг: насколько далеко эта постройка достаёт.',
+    tu3_d_touch: 'Веди пальцем по полю, и секция идёт за ним. <b>Тап по полю</b> повернёт её. Пунктирный круг: насколько далеко эта постройка достаёт.',
+    tu_store_t: 'Отложи про запас',
+    tu_store_d: 'Секция в руках не всегда та, которой не хватает стене. <b>C</b> уберёт её в запас и выдаст следующую. Нажми ещё раз, и они поменяются местами.',
+    tu_store_d_touch: '<b>Свайп вверх</b> по полю или кнопка <b>Запас</b>, и секция уходит на потом. Ещё раз, и отложенная вернётся в руки.',
     tu4_t: '\u041f\u043e\u0441\u0442\u0430\u0432\u044c',
     tu4_d: 'Снова <b>ПРОБЕЛ</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
     tu4_d_touch: '<b>Свайп вниз</b> по полю или кнопка <b>Бросок</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
     tu5_t: '\u0421\u043e\u0431\u0435\u0440\u0438 \u0441\u0442\u0435\u043d\u0443',
     tu5_d: '\u0421\u0442\u0440\u043e\u0439 \u0434\u0430\u043b\u044c\u0448\u0435. \u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u0440\u0435\u043b\u044f\u044e\u0442, \u043d\u043e \u0438 \u0434\u0435\u0440\u0436\u0430\u0442 \u0448\u0430\u0433\u0430\u044e\u0449\u0438\u0445, \u043f\u043b\u043e\u0442\u043d\u044b\u0439 \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u044f\u0434 \u044d\u0442\u043e \u0431\u0440\u043e\u043d\u044f \u0438 \u043e\u0433\u043d\u0435\u0432\u0430\u044f \u043c\u043e\u0449\u044c \u0440\u0430\u0437\u043e\u043c. \u041f\u043e\u0441\u0442\u0430\u0432\u044c \u0435\u0449\u0451 \u0442\u0440\u0438.',
     tu6_t: '\u0421\u043e\u043c\u043a\u043d\u0438 \u0440\u044f\u0434',
-    tu6_d: 'Забей ряд во все десять колонок, и он сомкнётся: ударная волна валит все машины на поле, ты получаешь припас и <b>ЛОМ</b>, который усиливает и уже стоящие постройки, и все будущие. Сам ряд при этом тратится \u2014 эти постройки исчезают, а стена оседает вниз, так что смыкай тот ряд, который не жалко.',
+    tu6_d: 'Забей ряд во все десять колонок, и он сомкнётся: ударная волна валит все машины на поле. Ряд на это и тратится, эти постройки исчезают, а стена оседает вниз. Смыкай тот ряд, который не жалко.',
+    tu_salvage_t: 'Что остаётся от ряда',
+    tu_salvage_d: 'Сомкнутый ряд разом платит припасом и насовсем даёт <b>лом</b>. Лом поднимает прочность и урон всем постройкам, и тем, что уже стоят, и тем, что поставишь после. Это единственное здешнее число, которое не падает.',
     tu7_t: '\u0421\u043b\u0435\u0434\u0438 \u0437\u0430 \u0447\u0435\u0440\u0442\u043e\u0439 \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0438',
     tu7_d: '\u041f\u0443\u043d\u043a\u0442\u0438\u0440\u043d\u0430\u044f \u043a\u0440\u0430\u0441\u043d\u0430\u044f \u043b\u0438\u043d\u0438\u044f: \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0435\u043c\u043b\u044f. \u0412\u0441\u0451, \u0447\u0442\u043e \u0432\u044b\u0448\u0435, \u0442\u0440\u0435\u0441\u043a\u0430\u0435\u0442\u0441\u044f \u0438 \u043e\u0431\u0432\u0430\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0441\u0430\u043c\u043e. \u0421\u0442\u0440\u043e\u0439 \u0432\u0448\u0438\u0440\u044c, \u0430 \u043d\u0435 \u0432\u0432\u044b\u0441\u044c.',
-    tu8_t: '\u0420\u0435\u043c\u043e\u043d\u0442 \u0438 \u043d\u0430\u0433\u0440\u0430\u0434\u044b',
-    tu8_d: 'Что-то прорвалось, и Сердце просело. Жми <b>R</b>, чтобы потратить припас на лечение \u2014 каждое следующее лечение в пределах волны дороже. Когда будешь готов, <b>ENTER</b> вызовет волну раньше срока, и чем раньше вызовешь, тем больше награда.',
-    tu8_d_touch: 'Что-то прорвалось, и Сердце просело. Жми <b>Лечить</b>, чтобы потратить припас, и каждое следующее лечение в пределах волны дороже. Когда будешь готов, <b>тапни по полосе волны</b>, и она придёт раньше срока: чем раньше вызовешь, тем больше награда.',
-    tu8b_t: '\u0421\u0442\u0435\u043d\u0430 \u043d\u0435 \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u0430',
-    tu8b_d: '\u041f\u043e\u043a\u0430 \u0438\u0434\u0451\u0442 \u0432\u043e\u043b\u043d\u0430, \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438 <b>\u0438\u0437\u043d\u0430\u0448\u0438\u0432\u0430\u044e\u0442\u0441\u044f</b>, \u0430 \u0432 \u043a\u043e\u043d\u0446\u0435 \u0432\u043e\u043b\u043d\u044b \u0431\u0435\u0440\u0443\u0442 <b>\u0441\u043e\u0434\u0435\u0440\u0436\u0430\u043d\u0438\u0435</b> \u0438\u0437 \u043f\u0440\u0438\u043f\u0430\u0441\u0430: \u043d\u0435 \u0445\u0432\u0430\u0442\u0438\u0442, \u0438 \u0432\u043c\u0435\u0441\u0442\u043e \u044d\u0442\u043e\u0433\u043e \u0441\u0442\u0440\u0430\u0434\u0430\u044e\u0442 \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438. <b>\u041b\u043e\u043c</b> \u0437\u0430 \u0441\u043e\u043c\u043a\u043d\u0443\u0442\u044b\u0435 \u0440\u044f\u0434\u044b \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430 \u043f\u043e\u0434\u043d\u0438\u043c\u0430\u0435\u0442 \u0438\u0445 \u0437\u0434\u043e\u0440\u043e\u0432\u044c\u0435 \u0438 \u0443\u0440\u043e\u043d, \u044d\u0442\u043e \u0438 \u0434\u0435\u0440\u0436\u0438\u0442 \u0442\u0435\u0431\u044f \u0432\u043f\u0435\u0440\u0435\u0434\u0438 \u043e\u0431\u043e\u0438\u0445 \u0441\u0447\u0451\u0442\u0447\u0438\u043a\u043e\u0432.',
+    tu8_t: 'Почини Сердце',
+    tu8_d: 'Что-то прорвалось, и Сердце просело. Жми <b>R</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
+    tu8_d_touch: 'Что-то прорвалось, и Сердце просело. Жми <b>Лечить</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
+    tu_call_t: 'Позови раньше',
+    tu_call_d: 'Полоса над полем отсчитывает время до следующей волны. <b>ENTER</b> вызовет её раньше срока, и чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
+    tu_call_d_touch: 'Полоса над полем отсчитывает время до следующей волны. <b>Тапни по полосе</b>, и волна придёт раньше срока: чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
     tu9_t: '\u0412\u043e\u0442 \u0438 \u043e\u043d\u0438',
-    tu9_d: '\u041e\u0434\u043d\u0430 \u0442\u0440\u0435\u043d\u0438\u0440\u043e\u0432\u043e\u0447\u043d\u0430\u044f \u0432\u043e\u043b\u043d\u0430. \u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0441\u0442\u0440\u0435\u043b\u044f\u044e\u0442 \u0441\u0430\u043c\u0438: \u0442\u0432\u043e\u0451 \u0434\u0435\u043b\u043e \u0441\u0442\u0440\u043e\u0438\u0442\u044c \u0438 \u0434\u0435\u0440\u0436\u0430\u0442\u044c \u0441\u0442\u0435\u043d\u0443 \u0441\u043e\u043c\u043a\u043d\u0443\u0442\u043e\u0439. \u041e\u0442\u0431\u0435\u0439 \u0435\u0451, \u0438 \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u0437\u0430\u043a\u043e\u043d\u0447\u0435\u043d\u043e.',
+    tu9_d: 'Постройки сами наводятся и сами стреляют. Стена на тебе: строй дальше и держи её сомкнутой.',
+    tu_bell_t: 'Колокол',
+    tu_bell_d: '<b>Колокол</b> бьёт разом по всем машинам на поле, отталкивает их на шаг и сбивает наводку. Припаса не стоит, возвращается 24 секунды. Ударь в него.',
+    tu_rally_t: 'Подмога',
+    tu_rally_d: '<b>Подмога</b> заставляет всех крутить вороты вдвое быстрее на несколько секунд. Тоже бесплатно, возвращается тридцать секунд. Береги её на тот момент, когда первый ряд вот-вот проломят.',
+    tu_mend_t: 'Латай стену',
+    tu_mend_d: 'Постройки изнашиваются, пока об них бьётся волна. <b>Латать стену</b> чинит их все разом за припас, и цена идёт за тем, сколько повреждений надо свести.',
+    tu_held_t: 'Держи',
+    tu_held_d: 'Держи стену сомкнутой, пока не упадёт последняя машина.',
+    tu_upkeep_t: 'Стена выставляет счёт',
+    tu_upkeep_d: 'Каждая отбитая волна кончается <b>содержанием</b>. Стена берёт с тебя припас просто за то, что стоит, и берёт тем больше, чем дальше ты зашёл. Не хватит припаса, и разницу постройки вычтут из собственной прочности.',
+    tu_hoard_t: 'Копить тоже дорого',
+    tu_hoard_d: 'Счёт это большее из двух чисел: во что обходится твоя стена и четверть припаса, который лежит без дела. Полный кошель облагают как длинную стену, так что вкладывай его в постройки, а не береги на потом.',
+    tu_cards_t: 'Выбери одну',
+    tu_cards_d: 'Отбитая волна кончается тремя карточками, и одну ты берёшь. Каждая показывает, что сделает именно с твоими числами, ещё до того как ты согласишься, так что читай строку внизу. Некоторые просят что-то взамен.',
+    tu_bell_t: 'Колокол',
+    tu_bell_d: '<b>Колокол</b> бьёт разом по всем машинам на поле, отталкивает их на шаг и сбивает наводку. Припаса не стоит, возвращается 24 секунды. Ударь в него.',
+    tu_rally_t: 'Подмога',
+    tu_rally_d: '<b>Подмога</b> заставляет всех крутить вороты вдвое быстрее на несколько секунд. Тоже бесплатно, возвращается тридцать секунд. Береги её на тот момент, когда первый ряд вот-вот проломят.',
+    tu_mend_t: 'Латай стену',
+    tu_mend_d: 'Постройки изнашиваются, пока об них бьётся волна. <b>Латать стену</b> чинит их все разом за припас, и цена идёт за тем, сколько повреждений надо свести.',
+    tu_held_t: 'Держи',
+    tu_held_d: 'Держи стену сомкнутой, пока не упадёт последняя машина.',
+    tu_upkeep_t: 'Стена выставляет счёт',
+    tu_upkeep_d: 'Каждая отбитая волна кончается <b>содержанием</b>. Стена берёт с тебя припас просто за то, что стоит, и берёт тем больше, чем дальше ты зашёл. Не хватит припаса, и разницу постройки вычтут из собственной прочности.',
+    tu_hoard_t: 'Копить тоже дорого',
+    tu_hoard_d: 'Счёт это большее из двух чисел: во что обходится твоя стена и четверть припаса, который лежит без дела. Полный кошель облагают как длинную стену, так что вкладывай его в постройки, а не береги на потом.',
+    tu_cards_t: 'Выбери одну',
+    tu_cards_d: 'Отбитая волна кончается тремя карточками, и одну ты берёшь. Каждая показывает, что сделает именно с твоими числами, ещё до того как ты согласишься, так что читай строку внизу. Некоторые просят что-то взамен.',
     /* ---- онлайн: аккаунты, комнаты и гонка на два поля ---- */
     m_online: 'Матч', m_onlineSub: 'Один сид, два поля, одна длинная ночь',
     on_title: 'Матч',
@@ -2299,6 +2372,13 @@ class Game {
     this.rotations = 0;
     this.moves = 0;
     this.repairs = 0;
+    /* Tallies the training script watches, so a step about the bell can wait
+       for the bell to actually ring instead of for a button labelled "next".
+       Nothing else reads them. */
+    this.stored = 0;
+    this.bells = 0;
+    this.rallies = 0;
+    this.mends = 0;
     this.shake = 0;
     this.emp = 0;
     this.overheat = 0;
@@ -2404,6 +2484,7 @@ class Game {
     if (this.hold) { const h = this.hold; this.hold = cur; this.spawnPiece(h); }
     else { this.hold = cur; this.spawnPiece(this.bag.next()); }
     this.holdUsed = true;
+    this.stored++;
     SFX.hold();
   }
 
@@ -2878,6 +2959,7 @@ class Game {
     if (!this.live) return;
     if (this.cdBell > 0) { SFX.denied(); return; }
     this.cdBell = CFG.bellCd;
+    this.bells++;
     const dmg = CFG.bellDmg * this.dmgMult;
     for (let i = this.enemies.length - 1; i >= 0; i--) this.hurt(this.enemies[i], dmg, i, true);
     // knock the survivors back a step and scatter their aim
@@ -2897,6 +2979,7 @@ class Game {
     if (!this.live) return;
     if (this.cdRally > 0) { SFX.denied(); return; }
     this.cdRally = CFG.rallyCd;
+    this.rallies++;
     this.rally = CFG.rallyTime;
     SFX.rally();
     this.setBanner(T('rallyUp'), '#5d9c41');
@@ -2979,6 +3062,7 @@ class Game {
     if (cost <= 0) return;
     if (this.coins < cost) { SFX.denied(); return; }
     this.coins -= cost;
+    this.mends++;
     let n = 0;
     for (let y = 0; y < this.grid.length; y++)
       for (let x = 0; x < CFG.cols; x++) {
@@ -5049,6 +5133,11 @@ function takeChoice(u) {
   renderTally(ui.chSum, null);
   game.paused = false;
   applyLayers();
+  /* The coach card takes itself off screen while a choice is up, and nothing
+     else puts it back: syncModal runs on events rather than on every frame,
+     and until training started dealing cards no choice ever closed with a
+     tutorial still running behind it. */
+  if (game.tutorial) renderTutorial();
   SFX.buy();
   toast(T('up_' + u.id + '_t'));
 }
@@ -5057,13 +5146,29 @@ function takeChoice(u) {
    TUTORIAL. Every step advances either on its own `check` or on the button,
    so nobody can get stuck — and Skip is on screen the entire time.
    ======================================================================== */
+/* The script is one idea per card, in the order the idea first matters.
+ *
+ * The old run said too much at once: closing a row arrived together with the
+ * shockwave, the payout and salvage in a single sentence, mending arrived
+ * together with calling the wave, and three mechanics shared the card about
+ * the wall not being free. Meanwhile the bell, the horn, the upkeep bill, the
+ * tax on a full purse and the cards between waves were never mentioned at all,
+ * so a player finished training and met five unexplained systems on wave one.
+ *
+ * `live` lets the countdown run, and it is off for everything up to the call,
+ * so the early cards are read in a sandbox with nothing coming. The tools and
+ * the economy are taught inside the practice wave and on the bill that lands
+ * when it ends, at the moment there is something on screen to point at.
+ */
 const TUT_STEPS = [
   { k: 'tu1' },
   { k: 'tu2', check: g => !!g.piece || g.placed > 0 },
   { k: 'tu3', check: g => g.rotations > 0 || g.moves > 2 },
+  { k: 'tu_store', check: g => g.stored > 0 },
   { k: 'tu4', check: g => g.placed >= 1 },
   { k: 'tu5', check: g => g.placed >= 4 },
   { k: 'tu6', check: g => g.linesCleared >= 1 },
+  { k: 'tu_salvage' },
   { k: 'tu7' },
   /* The heal step waited for `repairs > 0` on a Heart that starts full, and
      repair() returns immediately at full health — so the practice it asked for
@@ -5078,9 +5183,26 @@ const TUT_STEPS = [
       g.floatText(-10, CFG.coreH * 0.6, '-' + dent, '#bf4433');
       g.burst(0, CFG.coreH * 0.4, '#bf4433', 10);
     } },
-  { k: 'tu8b' },
-  { k: 'tu9', live: true, check: g => g.wave >= 1 && g.phase === 'prep' },
-  { k: 'tut_done', done: true },
+  /* From here the clock is allowed to run. `canCallWave` reads the same flag,
+     so the bar only becomes callable once the card that explains it is up. */
+  { k: 'tu_call', live: true, check: g => g.phase === 'fight' },
+  { k: 'tu9', live: true },
+  { k: 'tu_bell', live: true, check: g => g.bells > 0 },
+  { k: 'tu_rally', live: true, check: g => g.rallies > 0 },
+  /* No check on mending: with an undamaged wall the price is zero and the
+     button refuses, so waiting for a mend that cannot happen would be the same
+     dead end the heal step used to have. */
+  { k: 'tu_mend', live: true },
+  { k: 'tu_held', live: true, check: g => g.wave >= 1 && g.phase === 'prep' },
+  /* The bill has landed by now and the numbers on the card moved, so these
+     three point at something that just happened rather than at a rule. */
+  { k: 'tu_upkeep' },
+  { k: 'tu_hoard' },
+  { k: 'tu_cards' },
+  /* Entering the last card deals the three upgrades. The coach hides itself
+     while a choice is open, so the player reads this, picks, and comes back to
+     the finished card. */
+  { k: 'tut_done', done: true, enter: () => offerChoice() },
 ];
 
 function startTutorial() {
