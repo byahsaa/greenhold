@@ -1,0 +1,37 @@
+# This folder is a desk, and the repository is the game on it. Everything the
+# game does not need to build, run or be worked on stays out.
+
+# --- do not publish: these carry local session ids and transcript paths ------
+# Something writes hook payloads and grep output into the working directory
+# under bare numeric names, and new ones keep appearing. Matched by shape
+# rather than listed by name, because a list goes stale between commits and
+# these hold session ids and paths into local transcripts.
+# Safe to delete outright; ignored here so a stray one cannot be committed.
+/[0-9]*
+
+# --- other projects sharing the folder --------------------------------------
+ruflo/
+godot-mcp/
+block-defense-godot/
+greenhold-phaser/
+.claude-flow/
+anti-slop/
+review/
+-p/
+*.rar
+
+# --- the single file's own history, which git keeps from here on ------------
+index.pre-*.backup.html
+index.original.backup.html
+
+# --- build output and machine-local state -----------------------------------
+# deploy/ is a copy of the game made for Vercel, not a source of truth.
+deploy/
+.vercel/
+node_modules/
+.claude/settings.local.json
+
+# A 16MB third-party skill. CLAUDE.md does not reference it and it is not
+# this game's to redistribute.
+.claude/skills/impeccable/
+.claude/skills/.claude-flow/

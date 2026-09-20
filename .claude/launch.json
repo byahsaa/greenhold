@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "greenhold-source",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8777", "--directory", "block-defense-godot"],
+      "port": 8777
+    },
+    {
+      "name": "greenhold-root",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8778"],
+      "port": 8778
+    }
+  ]
+}
