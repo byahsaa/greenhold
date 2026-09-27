@@ -64,6 +64,16 @@
     background: linear-gradient(180deg, #cfe6ef 0%, #e7dcc2 38%, #dfd2b4 100%);
     font-family: var(--f-ui); display: flex; justify-content: center;
     align-items: flex-start; }
+  /* The body is a flex item of <html>, so without a width of its own it sized
+     itself to its content, and part of that content is the canvas, whose
+     natural width is its own pixel buffer. resize() sized the buffer from the
+     page, the page from the buffer: the field crept wider a few pixels a frame,
+     the HUD wrapped and unwrapped, the field height flipped with it, and every
+     flip cleared the canvas. On some windows the field sat blank. A definite
+     width breaks the loop; the cap keeps the field from turning into a strip
+     on a wide monitor. */
+  body { width: 100%; }
+  .app { max-width: 1200px; }
   /* The padding runs through these three so a media query can retune the
      numbers without dropping the safe-area insets underneath them. The insets
      are zero on everything except a notched phone, so the desktop padding is
@@ -232,9 +242,9 @@
 
   /* Overlay stacking order, in one place. Everything that can cover the field
      is listed here so a new layer cannot quietly slip under an older one:
-     pause sheet 20 < story card 30 < upgrade choice 40. The coach card used to
-     head this list; it now sits under the field instead of over it and so
-     covers nothing. */
+     coach card 12 < pause sheet 20 < story card 30 < upgrade choice 40. The
+     coach floats over the empty sky on a wide field and is a row under it on
+     a narrow one; either way every sheet covers it. */
   .modal   { z-index: 20 }
   .sectorcard { z-index: 30 }
   .choice  { z-index: 40 }
@@ -464,42 +474,61 @@
   .card.risk:hover { border-color: rgba(191,68,51,.85); }
 
   /* ----------------------------- tutorial --------------------------------
-     The coach is a ROW UNDER THE FIELD, not a card on top of it.
+     The coach is a small card, and where it sits depends on the room.
 
-     As a floating card it sat exactly on the strip of ground the machines walk
-     along: 470x157 over an 830x525 field, covering the whole approach lane.
-     The wave the card was explaining happened behind the card, so the Heart
-     lost health and the screen flashed red while nothing was ever seen
-     arriving. resize() gives the canvas whatever is left under the stage, so a
-     row here costs the field a little height and hides none of it.
+     .float (a wide field): pinned in the empty sky at the top right of the
+     field. Nothing is played up there: the yard and the piece strip are on the
+     left, the machines walk the ground, the banner moves aside for it (see
+     drawBanner). It takes no layout height, so the field keeps its full size.
 
-     min-height keeps the field from jumping a few pixels every time a step
-     with a shorter line comes up. */
-  .tut { position: relative; display: flex; gap: 12px; align-items: center;
-    min-height: 82px; padding: 10px 14px 15px; border-radius: 12px;
-    border: 1px solid rgba(93,156,65,.55); background: rgba(252,247,234,.96);
+     Without .float (a phone, a narrow or short window): a compact row under
+     the field, because a narrow field has no empty corner to spare.
+
+     Either way the text is held to a readable measure. The old row stretched
+     one sentence across the whole window in two very long lines. */
+  .tut { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "hd hd" "txt acts"; gap: 5px 12px; align-items: end;
+    padding: 9px 12px 13px; border-radius: 12px;
+    border: 1px solid rgba(93,156,65,.55); background: rgba(252,247,234,.97);
     box-shadow: 0 2px 12px rgba(70,55,30,.12); }
   .tut[hidden] { display: none; }
-  .tut .num { flex: none; width: 27px; height: 27px; border-radius: 8px; display: grid;
+  .tut.float { position: absolute; z-index: 12; top: 12px; right: 58px;
+    width: min(340px, calc(100% - 90px));
+    grid-template-columns: minmax(0, 1fr); grid-template-areas: "hd" "txt" "acts";
+    gap: 7px; padding: 11px 14px 15px; box-shadow: 0 10px 28px rgba(70,55,30,.22);
+    animation: tutIn .22s ease; }
+  @keyframes tutIn { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
+  .tut .hd { grid-area: hd; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .tut .num { flex: none; width: 22px; height: 22px; border-radius: 6px; display: grid;
     place-items: center; background: rgba(93,156,65,.18); border: 1px solid rgba(93,156,65,.5);
-    font-family: var(--f-display); font-size: 14px; color: #3c6b28; letter-spacing: 0; }
-  .tut .num .ico { width: 17px; height: 17px; }
-  .tut .body { flex: 1 1 auto; min-width: 0; }
-  .tut .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .tut .ttl { font-family: var(--f-display); font-size: 16px; font-weight: 500; letter-spacing: 1.8px;
-    text-transform: uppercase; color: var(--ink-ice); }
-  .tut .txt { font-size: 11px; line-height: 1.55; color: #4d3c28; margin-top: 3px; }
+    font-family: var(--f-display); font-size: 12px; color: #3c6b28; letter-spacing: 0; }
+  .tut .num .ico { width: 14px; height: 14px; }
+  .tut .ttl { flex: 1 1 auto; min-width: 0; font-family: var(--f-display); font-size: 15px;
+    font-weight: 500; letter-spacing: 1.4px; line-height: 1.15; text-transform: uppercase;
+    color: var(--ink-ice); }
+  /* skipping is always one tap away, but it is the quiet option, not a second
+     button shouting next to the one the card actually wants pressed */
+  .tut .skip { flex: none; padding: 4px 2px; border: 0; background: none; cursor: pointer;
+    font-family: var(--f-ui); font-size: 10px; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--ink-dim);
+    text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(95,81,64,.4); }
+  .tut .skip:hover { color: var(--ink-danger); text-decoration-color: currentColor; }
+  .tut .skip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
+  .tut .txt { grid-area: txt; max-width: 50ch; font-size: 11.5px; line-height: 1.6;
+    color: #4d3c28; text-wrap: pretty; }
   .tut .txt b { color: #8a5a12; font-weight: 700; }
-  .tut .acts { flex: none; display: flex; gap: 7px; align-items: center; }
-  .tut .acts .btn { padding: 8px 13px; font-size: 10px; }
+  .tut .acts { grid-area: acts; display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; min-width: 0; }
+  .tut.float .acts { justify-content: space-between; }
+  .tut .acts .btn { padding: 7px 14px; font-size: 10.5px; margin-left: auto; }
   /* how far through the script you are: a hairline along the bottom edge */
-  .tut .prog { position: absolute; left: 13px; right: 13px; bottom: 7px; height: 3px;
+  .tut .prog { position: absolute; left: 12px; right: 12px; bottom: 6px; height: 3px;
     border-radius: 2px; background: rgba(120,92,58,.2); overflow: hidden; }
   .tut .prog i { display: block; height: 100%; width: 100%; background: var(--ice);
     transform: scaleX(0); transform-origin: left center; transition: transform .3s; }
-  .tut.done { border-color: rgba(60,230,160,.55); }
+  .tut.done { border-color: rgba(93,156,65,.8); }
   .tut.done .num { background: rgba(93,156,65,.2); border-color: rgba(93,156,65,.55); color: #3c6b28; }
-  .tut.done .ttl { color: var(--good); }
+  .tut.done .ttl { color: var(--ink-good); }
 
   /* The slow-motion badge. A card that lands mid-wave used to be unreadable:
      five machines crossed the field in the time it takes to read three lines.
@@ -508,12 +537,18 @@
   .tut .slow { display: inline-flex; align-items: center; gap: 6px; flex: none;
     padding: 2px 8px 3px; border-radius: 999px; border: 1px solid rgba(207,138,36,.55);
     background: rgba(255,240,205,.9); color: #8a5a12;
-    font-size: 9px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; }
+    font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
   .tut .slow[hidden] { display: none; }
-  .tut .slow i { display: block; width: 34px; height: 3px; border-radius: 2px;
+  .tut .slow i { display: block; width: 30px; height: 3px; border-radius: 2px;
     background: rgba(138,90,18,.25); overflow: hidden; }
   .tut .slow i b { display: block; height: 100%; width: 100%; background: #cf8a24;
     transform-origin: left center; }
+  /* in the row the badge shares a narrow column with the button, so it keeps
+     its short name */
+  .tut .slow .lg { display: none; }
+  .tut.float .slow .lg { display: inline; }
+  .tut.float .slow .sh { display: none; }
+  .tut:not(.float) .acts { flex-direction: column; align-items: flex-end; gap: 5px; }
 
   /* What the card is pointing at, lit on the thing itself. World objects get
      the same ring drawn on the canvas; this is for the buttons and the HUD. */
@@ -557,14 +592,12 @@
     .codexlist { max-height: 46vh; }
     .cards { gap: 8px; }
     .card { flex: 1 1 100%; max-width: none; }
-    /* the coach folds: text across the full width, then the two buttons under
-       it at a size a thumb can actually hit */
-    .tut { flex-wrap: wrap; gap: 9px 10px; padding: 9px 12px 14px; min-height: 0; }
-    .tut .body { flex: 1 1 200px; }
-    .tut .acts { flex: 1 1 100%; }
-    .tut .acts .btn { flex: 1 1 0; justify-content: center; min-height: 44px; }
-    .tut .ttl { font-size: 15px; }
-    .tut .txt { font-size: 11px; }
+    /* the coach row on a phone: the button keeps a thumb-sized target, the
+       text gets everything else */
+    .tut { gap: 4px 10px; padding: 8px 10px 12px; }
+    .tut .ttl { font-size: 14px; }
+    .tut .txt { font-size: 11px; line-height: 1.55; }
+    .tut .acts .btn { min-height: 44px; min-width: 84px; }
   }
 
   /* Below this the chrome alone eats the viewport: three stacked ability rows,
@@ -801,21 +834,19 @@
 
     </div>
 
-    <!-- Training coach. Deliberately a sibling of the stage rather than a
-         child of it: inside, it was an overlay parked on the approach lane,
-         and the machines it was describing walked underneath it. -->
-    <div class="tut" id="tut" hidden>
-      <div class="num" id="tutNum">1</div>
-      <div class="body">
-        <div class="hd">
-          <span class="ttl" id="tutTitle"></span>
-          <span class="slow" id="tutSlow" hidden><span id="tutSlowT"></span><i><b id="tutSlowBar"></b></i></span>
-        </div>
-        <div class="txt" id="tutText"></div>
+    <!-- Training coach. placeCoach() decides where it lives: inside the stage,
+         floating in the empty sky, when the field is wide enough; here, as a
+         row under the field, when it is not. -->
+    <div class="tut" id="tut" role="region" aria-live="polite" aria-labelledby="tutTitle" hidden>
+      <div class="hd">
+        <span class="num" id="tutNum">1</span>
+        <span class="ttl" id="tutTitle"></span>
+        <button type="button" class="skip" id="tutSkip"></button>
       </div>
+      <div class="txt" id="tutText"></div>
       <div class="acts">
+        <span class="slow" id="tutSlow" hidden><span class="lg" id="tutSlowT"></span><span class="sh" id="tutSlowS"></span><i><b id="tutSlowBar"></b></i></span>
         <button class="btn good" id="tutNext"></button>
-        <button class="btn ghost" id="tutSkip"></button>
       </div>
       <div class="prog"><i id="tutProg"></i></div>
     </div>
@@ -1522,8 +1553,8 @@ const I18N = {
     ab_ready: 'ready', ab_nothing: 'nothing to mend',
     wearNote: 'buildings wear down while a wave is on the field',
 
-    tut_skip: 'Skip training', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
-    tut_slow: 'Slowed while you read',
+    tut_skip: 'Skip', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
+    tut_slow: 'Slowed while you read', tut_slow_s: 'Slow-mo',
     tut_safe: 'TRAINING: THE HEART HOLDS',
     tut_done_t: 'Training done',
     tut_done_d: 'That is the whole yard. The real thing starts now: waves get bigger, new machines walk out of that ridge, and nothing waits for you. Good luck, builder.',
@@ -1768,8 +1799,8 @@ const I18N = {
     ab_ready: 'готово', ab_nothing: 'латать нечего',
     wearNote: 'постройки изнашиваются, пока на поле идёт волна',
 
-    tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u0435', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
-    tut_slow: 'Замедлено, пока читаешь',
+    tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
+    tut_slow: 'Замедлено, пока читаешь', tut_slow_s: 'Замедл.',
     tut_safe: 'ОБУЧЕНИЕ: СЕРДЦЕ НЕ ПОГАСНЕТ',
     tut_done_t: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0439\u0434\u0435\u043d\u043e',
     tut_done_d: '\u042d\u0442\u043e \u0432\u0435\u0441\u044c \u0434\u0432\u043e\u0440. \u0414\u0430\u043b\u044c\u0448\u0435 \u043f\u043e-\u043d\u0430\u0441\u0442\u043e\u044f\u0449\u0435\u043c\u0443: \u0432\u043e\u043b\u043d\u044b \u0440\u0430\u0441\u0442\u0443\u0442, \u0438\u0437-\u0437\u0430 \u043a\u0440\u044f\u0436\u0430 \u0432\u044b\u0445\u043e\u0434\u044f\u0442 \u043d\u043e\u0432\u044b\u0435 \u043c\u0430\u0448\u0438\u043d\u044b, \u0438 \u043d\u0438\u043a\u0442\u043e \u0442\u0435\u0431\u044f \u043d\u0435 \u0436\u0434\u0451\u0442. \u0423\u0434\u0430\u0447\u0438, \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c.',
@@ -2206,6 +2237,7 @@ let CW = 800, CH = 480, DPR = 1;
 function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
   const stage = document.getElementById('stage');
+  placeCoach(stage);
   /* Measure where the field actually starts and give it the rest of the
      window. The old floor of 340px was taller than what was left on a 320x568
      phone or a short desktop window, so the field began below the fold and the
@@ -2240,6 +2272,30 @@ function resize() {
   sizeCanvas(canvas, h);
   if (ghostCanvas && !ghostCanvas.parentElement.hidden) sizeCanvas(ghostCanvas, h);
   CW = canvas.parentElement.clientWidth;
+}
+/* The coach card floats in the field's empty top-right sky when there is room
+   for it (a desktop or tablet), and drops to a row under the field when there
+   is not (a phone, a short window). Floating costs the field no height; the
+   row costs a little but never covers the yard on a field too narrow to have
+   an empty corner. Moving it is idempotent, so the ResizeObserver this sets
+   off lands on a no-op. */
+const COACH_FLOAT_MIN_W = 720, COACH_FLOAT_MIN_H = 520;
+function placeCoach(stage) {
+  const tut = document.getElementById('tut');
+  if (!tut || !stage) return;
+  const float = stage.clientWidth >= COACH_FLOAT_MIN_W && window.innerHeight >= COACH_FLOAT_MIN_H;
+  if (tut.classList.contains('float') !== float) tut.classList.toggle('float', float);
+  if (float && tut.parentElement !== stage) stage.appendChild(tut);
+  else if (!float && tut.parentElement === stage) stage.after(tut);
+}
+/* Where the floating coach starts, in canvas pixels, or null when it is not
+   floating. The banner uses it to step out of the card's way. */
+function coachFloatLeft() {
+  const tut = document.getElementById('tut');
+  if (!tut || tut.hidden || !tut.classList.contains('float')) return null;
+  const cr = canvas.getBoundingClientRect(), tr = tut.getBoundingClientRect();
+  if (tr.top - cr.top > CH * 0.45) return null;      // not up where the banner is
+  return tr.left - cr.left;
 }
 /* assigning canvas.width clears it, so only touch what actually changed */
 function sizeCanvas(cv, h) {
@@ -4608,14 +4664,26 @@ class Game {
     const fade = b.t > b.life - .5 ? (b.life - b.t) / .5 : 1;
     ctx.globalAlpha = Math.max(0, Math.min(1, fade));
     ctx.textAlign = 'center';
-    ctx.font = '600 ' + (21 + k * 7) + 'px ' + FD;
+    /* sized to the field: on a phone the full size ran off both edges */
+    let fs = 21 + k * 7;
+    ctx.font = '600 ' + fs + 'px ' + FD;
+    const fitW = ctx.measureText(b.text).width;
+    if (fitW > CW - 24) { fs = Math.max(12, fs * (CW - 24) / fitW); ctx.font = '600 ' + fs.toFixed(1) + 'px ' + FD; }
+    /* centred on the field, unless the floating coach card is sitting on that
+       spot: then centred on the sky left of the card, clamped to the canvas */
+    let bx = CW / 2;
+    const cl = this.tutorial ? coachFloatLeft() : null;
+    if (cl !== null) {
+      const half = ctx.measureText(b.text).width / 2 + 10;
+      if (bx + half > cl) bx = Math.max(half, Math.min(bx, cl - half));
+    }
     // a cream outline keeps banner text legible over sky, grass or a crowd
     ctx.lineWidth = 4.5;
     ctx.strokeStyle = 'rgba(255,250,232,.92)';
     ctx.lineJoin = 'round';
-    ctx.strokeText(b.text, CW / 2, CH * 0.3);
+    ctx.strokeText(b.text, bx, CH * 0.3);
     ctx.fillStyle = b.color;
-    ctx.fillText(b.text, CW / 2, CH * 0.3);
+    ctx.fillText(b.text, bx, CH * 0.3);
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
@@ -4777,7 +4845,7 @@ const ui = {
   choice: $('choice'), chHd: $('chHd'), chTitle: $('chTitle'), chCards: $('chCards'), chSum: $('chSum'),
   sectorCard: $('sectorCard'), scNo: $('scNo'), scTitle: $('scTitle'), scLog: $('scLog'), scGo: $('scGo'),
   tut: $('tut'), tutNum: $('tutNum'), tutTitle: $('tutTitle'), tutText: $('tutText'),
-  tutNext: $('tutNext'), tutSkip: $('tutSkip'), tutProg: $('tutProg'),
+  tutNext: $('tutNext'), tutSkip: $('tutSkip'), tutProg: $('tutProg'), tutSlowS: $('tutSlowS'),
   tutSlow: $('tutSlow'), tutSlowT: $('tutSlowT'), tutSlowBar: $('tutSlowBar'),
   toast: $('toast'), fieldState: $('fieldState'), fieldEvent: $('fieldEvent'),
   /* versus */
@@ -5420,6 +5488,7 @@ function renderTutorial() {
   sty(ui.tutProg, 'transform', 'scaleX(' + (t.step / (TUT_STEPS.length - 1)).toFixed(3) + ')');
   setCoachLit(ui.tut.hidden ? null : s.el);
   put(ui.tutSlowT, T('tut_slow'));
+  put(ui.tutSlowS, T('tut_slow_s'));
   renderReadWindow();
   /* The row is part of the layout, so its height is the field's height:
      re-measure whenever the card changes rather than leaving the canvas
