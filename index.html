@@ -70,10 +70,9 @@
      page, the page from the buffer: the field crept wider a few pixels a frame,
      the HUD wrapped and unwrapped, the field height flipped with it, and every
      flip cleared the canvas. On some windows the field sat blank. A definite
-     width breaks the loop; the cap keeps the field from turning into a strip
-     on a wide monitor. */
+     width breaks the loop. The game takes the whole window: the camera below
+     decides how much of that width the yard fills. */
   body { width: 100%; }
-  .app { max-width: 1200px; }
   /* The padding runs through these three so a media query can retune the
      numbers without dropping the safe-area insets underneath them. The insets
      are zero on everything except a notched phone, so the desktop padding is
@@ -128,6 +127,8 @@
   .btn.warn .warn { display: block; color: var(--danger); }
   .btn.muted .off, .btn.paused .off { display: block; }
   .btn.muted .on, .btn.paused .on { display: none; }
+  .btn.full .off { display: block; }
+  .btn.full .on { display: none; }
   /* a keyboard player currently sees nothing at all move while tabbing */
   .btn:focus-visible, .abil:focus-visible, .mbtn:focus-visible, .card:focus-visible {
     outline: 2px solid var(--ice); outline-offset: 2px; }
@@ -503,7 +504,7 @@
     place-items: center; background: rgba(93,156,65,.18); border: 1px solid rgba(93,156,65,.5);
     font-family: var(--f-display); font-size: 12px; color: #3c6b28; letter-spacing: 0; }
   .tut .num .ico { width: 14px; height: 14px; }
-  .tut .ttl { flex: 1 1 auto; min-width: 0; font-family: var(--f-display); font-size: 15px;
+  .tut .ttl { flex: 1 1 auto; min-width: 0; font-family: var(--f-display); font-size: 17px;
     font-weight: 500; letter-spacing: 1.4px; line-height: 1.15; text-transform: uppercase;
     color: var(--ink-ice); }
   /* skipping is always one tap away, but it is the quiet option, not a second
@@ -516,7 +517,9 @@
   .tut .skip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
   .tut .txt { grid-area: txt; max-width: 50ch; font-size: 11.5px; line-height: 1.6;
     color: #4d3c28; text-wrap: pretty; }
-  .tut .txt b { color: #8a5a12; font-weight: 700; }
+  /* the terms a card is teaching (upkeep, salvage, the keys to press) stand a
+     size up from the sentence around them instead of only changing colour */
+  .tut .txt b { color: #8a5a12; font-weight: 800; font-size: 1.18em; letter-spacing: .2px; }
   .tut .acts { grid-area: acts; display: flex; align-items: center; justify-content: flex-end;
     gap: 8px; min-width: 0; }
   .tut.float .acts { justify-content: space-between; }
@@ -551,14 +554,37 @@
   .tut:not(.float) .acts { flex-direction: column; align-items: flex-end; gap: 5px; }
 
   /* What the card is pointing at, lit on the thing itself. World objects get
-     the same ring drawn on the canvas; this is for the buttons and the HUD. */
-  .coachlit { position: relative; box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 7px rgba(93,156,65,.22); }
+     a ring and a signboard drawn on the canvas; this is for the buttons and
+     the HUD.
+
+     An outline alone only recoloured a label the player still had to find:
+     "Upkeep" stayed 11px tall in a row of six other 11px labels. So the lit
+     thing now grows, on a parchment plate that lifts it off its neighbours,
+     big enough to read at a glance. It grows from the side nearest the screen
+     edge (setCoachLit sets --lit-origin) so it never runs off the window, and
+     a stat lets clicks through, since it has nothing to press. */
+  .coachlit { position: relative; z-index: 50; border-radius: 10px;
+    transform: translateX(var(--lit-dx, 0px)) scale(var(--lit-scale, 1.35));
+    transform-origin: var(--lit-origin, center top);
+    transition: transform .3s cubic-bezier(.3, 1.6, .5, 1);
+    background-color: #fffaf0 !important;
+    box-shadow: 0 0 0 3px rgba(93,156,65,.95), 0 0 0 9px rgba(93,156,65,.2), 0 12px 28px rgba(60,45,25,.3); }
   .coachlit:not(.stat) { border-color: rgba(93,156,65,.9) !important; }
+  .stat.coachlit { --lit-scale: 1.9; pointer-events: none;
+    box-shadow: 0 0 0 6px #fffaf0, 0 0 0 8px rgba(93,156,65,.95), 0 0 0 13px rgba(93,156,65,.2),
+                0 12px 28px rgba(60,45,25,.3); }
+  .abil.coachlit { --lit-scale: 1.22; }
+  /* the bar already spans the window, so it stays put and its words grow
+     inside it instead of the whole bar running off both edges */
+  .wavebar.coachlit { --lit-scale: 1; --lit-dx: 0px !important; }
+  .wavebar.coachlit .wavetext { transform: scale(1.28); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+  .tbtn.coachlit { --lit-scale: 1.25; }
   html:not(.calm) .coachlit { animation: coachPulse 1.5s ease-in-out infinite; }
   @keyframes coachPulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 5px rgba(93,156,65,.2); }
-    50%      { box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 10px rgba(93,156,65,0); }
+    0%, 100% { outline: 0 solid rgba(93,156,65,.0); }
+    50%      { outline: 6px solid rgba(93,156,65,.18); }
   }
+  html:not(.calm) .coachlit { outline-offset: 10px; }
 
   /* Text that exists only for assistive tech: clipped to nothing, never
      display:none, which would take it out of the accessibility tree too. */
@@ -678,6 +704,8 @@
      560px rather than the 420px above, because the largest phones report 430.
      ---------------------------------------------------------------------- */
   @media (pointer: coarse) and (max-width: 560px) {
+    /* the phone row is already full; full screen lives in the pause sheet */
+    #fsBtn    { display: none; }
     .hud      { order: 1; }
     .wavebar  { order: 2; }
     .stage    { order: 3; }
@@ -732,6 +760,7 @@
         <button class="btn gold" id="buyBtn"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6.6 2.9 10 5.7 13.4 2.9"/><rect x="4.6" y="7.6" width="10.8" height="10.8" rx="2"/><path d="M7.1 11.4h5.8M7.1 14.6h5.8"/></svg><svg class="ico warn" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3.4 17.4 16.6H2.6Z"/><path d="M10 8.4v3.6"/><circle class="f" cx="10" cy="14.1" r="1"/></svg><span class="t" id="buyT"></span></button>
         <button class="btn good" id="repairBtn"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2.6c3.6 4.5 5.4 6.9 5.4 9.2a5.4 5.4 0 0 1-10.8 0c0-2.3 1.8-4.7 5.4-9.2Z"/><path d="M5.4 12.4c1.5-1.4 3.1-1.4 4.6 0s3.1 1.4 4.6 0"/></svg><span class="t" id="repairT"></span></button>
         <button class="btn ico-only" id="muteBtn" title="M"><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 7.9h3.1L10.8 4.3v11.4L6.5 12.1H3.4Z"/><path d="M13.7 7.6a4 4 0 0 1 0 4.8"/><path d="M16 5.3a7.2 7.2 0 0 1 0 9.4"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 7.9h3.1L10.8 4.3v11.4L6.5 12.1H3.4Z"/><path d="m13.6 7.6 4.6 4.8M18.2 7.6l-4.6 4.8"/></svg></button>
+        <button class="btn ico-only" id="fsBtn" hidden><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.6 7.4V3.6h3.8M12.6 3.6h3.8v3.8M16.4 12.6v3.8h-3.8M7.4 16.4H3.6v-3.8"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.4 3.6v3.8H3.6M16.4 7.4h-3.8V3.6M12.6 16.4v-3.8h3.8M3.6 12.6h3.8v3.8"/></svg></button>
         <button class="btn ico-only" id="pauseBtn" title="P"><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.4 4.4v11.2M12.6 4.4v11.2" stroke-width="2.6"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6.8 4.3 15.6 10l-8.8 5.7Z"/></svg></button>
       </div>
     </header>
@@ -794,6 +823,10 @@
           <div class="row">
             <span class="lbl" id="lTouch">Touch controls</span>
             <button class="btn" id="touchBtn" aria-pressed="false"></button>
+          </div>
+          <div class="row" id="fsRow" hidden>
+            <span class="lbl" id="lScreen">Screen</span>
+            <button class="btn" id="fsSheetBtn" aria-pressed="false"></button>
           </div>
           <details>
             <summary id="keysTitle"></summary>
@@ -1494,6 +1527,8 @@ const I18N = {
     m_backSub: 'Back to the settlement',
     pause: 'Pause', mainMenu: 'Main menu', volume: 'Volume',
     a_soundOn: 'Sound on', a_soundOff: 'Sound off',
+    a_fsOn: 'Full screen', a_fsOff: 'Leave full screen',
+    screen: 'Screen', fs_on: 'Full screen', fs_off: 'In a window',
     
 
     cx_title: 'Ledger', cx_story: 'Records', cx_foes: 'Machines', cx_mods: 'Buildings',
@@ -1555,13 +1590,14 @@ const I18N = {
 
     tut_skip: 'Skip', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
     tut_slow: 'Slowed while you read', tut_slow_s: 'Slow-mo',
+    cl_front: 'Front row', cl_full: 'Full row', cl_line: 'Load line', cl_rift: 'The Rift',
     tut_safe: 'TRAINING: THE HEART HOLDS',
     tut_done_t: 'Training done',
     tut_done_d: 'That is the whole yard. The real thing starts now: waves get bigger, new machines walk out of that ridge, and nothing waits for you. Good luck, builder.',
     tut_skipped: 'Training skipped, good luck',
 
     tu1_t: 'This is the Heart',
-    tu1_d: 'The spring on the left is the Heart of the settlement. All of this is about keeping it lit. When its bar reaches zero, the run is over.',
+    tu1_d: 'This spring is the Heart of the settlement. All of this is about keeping it lit. When its bar reaches zero, the run is over.',
     tu2_t: 'Build something',
     tu2_d: 'Press <b>SPACE</b> or hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
     tu2_d_touch: 'Hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
@@ -1740,6 +1776,8 @@ const I18N = {
     m_backSub: '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u0435',
     pause: 'Пауза', mainMenu: 'Главное меню', volume: 'Громкость',
     a_soundOn: 'Звук включён', a_soundOff: 'Звук выключен',
+    a_fsOn: 'Во весь экран', a_fsOff: 'Выйти из полноэкранного режима',
+    screen: 'Экран', fs_on: 'Во весь экран', fs_off: 'В окне',
     
 
     cx_title: '\u041a\u043d\u0438\u0433\u0430', cx_story: '\u0417\u0430\u043f\u0438\u0441\u0438', cx_foes: '\u041c\u0430\u0448\u0438\u043d\u044b', cx_mods: '\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438',
@@ -1801,13 +1839,14 @@ const I18N = {
 
     tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
     tut_slow: 'Замедлено, пока читаешь', tut_slow_s: 'Замедл.',
+    cl_front: 'Первый ряд', cl_full: 'Целый ряд', cl_line: 'Черта нагрузки', cl_rift: 'Разлом',
     tut_safe: 'ОБУЧЕНИЕ: СЕРДЦЕ НЕ ПОГАСНЕТ',
     tut_done_t: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0439\u0434\u0435\u043d\u043e',
     tut_done_d: '\u042d\u0442\u043e \u0432\u0435\u0441\u044c \u0434\u0432\u043e\u0440. \u0414\u0430\u043b\u044c\u0448\u0435 \u043f\u043e-\u043d\u0430\u0441\u0442\u043e\u044f\u0449\u0435\u043c\u0443: \u0432\u043e\u043b\u043d\u044b \u0440\u0430\u0441\u0442\u0443\u0442, \u0438\u0437-\u0437\u0430 \u043a\u0440\u044f\u0436\u0430 \u0432\u044b\u0445\u043e\u0434\u044f\u0442 \u043d\u043e\u0432\u044b\u0435 \u043c\u0430\u0448\u0438\u043d\u044b, \u0438 \u043d\u0438\u043a\u0442\u043e \u0442\u0435\u0431\u044f \u043d\u0435 \u0436\u0434\u0451\u0442. \u0423\u0434\u0430\u0447\u0438, \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c.',
     tut_skipped: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e, \u0443\u0434\u0430\u0447\u0438',
 
     tu1_t: '\u042d\u0442\u043e \u0421\u0435\u0440\u0434\u0446\u0435',
-    tu1_d: '\u0420\u043e\u0434\u043d\u0438\u043a \u0441\u043b\u0435\u0432\u0430: \u0421\u0435\u0440\u0434\u0446\u0435 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u044f. \u0412\u0441\u044f \u0438\u0433\u0440\u0430 \u043e \u0442\u043e\u043c, \u0447\u0442\u043e\u0431\u044b \u043e\u043d\u043e \u043d\u0435 \u043f\u043e\u0433\u0430\u0441\u043b\u043e. \u0415\u0433\u043e \u043f\u043e\u043b\u043e\u0441\u0430 \u0434\u043e\u0439\u0434\u0451\u0442 \u0434\u043e \u043d\u0443\u043b\u044f, \u0437\u0430\u0431\u0435\u0433 \u043e\u043a\u043e\u043d\u0447\u0435\u043d.',
+    tu1_d: 'Этот родник: \u0421\u0435\u0440\u0434\u0446\u0435 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u044f. \u0412\u0441\u044f \u0438\u0433\u0440\u0430 \u043e \u0442\u043e\u043c, \u0447\u0442\u043e\u0431\u044b \u043e\u043d\u043e \u043d\u0435 \u043f\u043e\u0433\u0430\u0441\u043b\u043e. \u0415\u0433\u043e \u043f\u043e\u043b\u043e\u0441\u0430 \u0434\u043e\u0439\u0434\u0451\u0442 \u0434\u043e \u043d\u0443\u043b\u044f, \u0437\u0430\u0431\u0435\u0433 \u043e\u043a\u043e\u043d\u0447\u0435\u043d.',
     tu2_t: '\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0447\u0442\u043e-\u043d\u0438\u0431\u0443\u0434\u044c',
     tu2_d: '\u041d\u0430\u0436\u043c\u0438 <b>\u041f\u0420\u041e\u0411\u0415\u041b</b> \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
     tu2_d_touch: '\u0416\u043c\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
@@ -1978,6 +2017,16 @@ const CFG = {
   /* how far the camera may pull back; the framing rule below keeps the load
      line in view, so this only bites on very small windows */
   minZoom: 0.5,
+  /* How close it may come. The yard used to be framed up to the load line at
+     all times, which on a wide window left it in the bottom-left corner with
+     the right half of the screen empty. It now frames the stack, the piece in
+     the air and a little headroom, at least viewMinRows tall, and pulls back
+     to take in the load line once the stack is within lineWarnRows of it. */
+  maxZoom: 2.0,
+  viewMinRows: 7,
+  lineWarnRows: 5,
+  /* training: how far the camera may lean in on the thing a card is about */
+  coachMaxZoom: 2.5,
 
   /* --- tetris feel: slower, forgiving, tap-accurate --- */
   fallInterval: 0.95,
@@ -2296,6 +2345,26 @@ function coachFloatLeft() {
   const cr = canvas.getBoundingClientRect(), tr = tut.getBoundingClientRect();
   if (tr.top - cr.top > CH * 0.45) return null;      // not up where the banner is
   return tr.left - cr.left;
+}
+/* The part of the field the training camera may frame things in, in canvas
+   pixels: below the piece strip, and clear of the floating card. The card sits
+   top right, so the bigger of "left of it" and "under it" wins. */
+let coachAreaMemo = null, coachAreaAt = -1;
+function coachFreeArea() {
+  // asked several times a frame; the card only moves on layout, so measure once
+  const now = performance.now();
+  if (coachAreaMemo && now - coachAreaAt < 8) return coachAreaMemo;
+  coachAreaAt = now;
+  const a = coachAreaMemo = { l: 10, t: 80, r: CW - 10, b: CH - 10 };
+  const tut = document.getElementById('tut');
+  if (tut && !tut.hidden && tut.classList.contains('float')) {
+    const cr = canvas.getBoundingClientRect(), tr = tut.getBoundingClientRect();
+    const left = tr.left - cr.left - 16, under = tr.bottom - cr.top + 14;
+    const byLeft = Math.max(0, left - a.l) * (a.b - a.t);
+    const byUnder = (a.r - a.l) * Math.max(0, a.b - Math.max(a.t, under));
+    if (byLeft >= byUnder) a.r = Math.min(a.r, left); else a.t = Math.max(a.t, under);
+  }
+  return a;
 }
 /* assigning canvas.width clears it, so only touch what actually changed */
 function sizeCanvas(cv, h) {
@@ -2831,7 +2900,13 @@ class Game {
     const d = ENEMIES[type];
     const hp = CFG.enemyHp(this.wave) * d.hpMul;
     const ds = CFG.enemyDmgScale(this.wave);
-    const x = atX !== undefined ? atX : CFG.cols * CFG.cell + CFG.approach - 10 + STREAM.wave.range(0, 40);
+    /* A machine from the tear starts just BEHIND it, its front edge on the
+       tear line, and walks out: drawEnemies hides whatever is still on the far
+       side, so it steps through instead of swelling up out of thin air. The
+       draw from the wave stream stays one call, so both halves of a versus
+       match still roll the same numbers. */
+    const x = atX !== undefined ? atX
+      : CFG.cols * CFG.cell + CFG.approach + d.r * .95 + STREAM.wave.range(0, 14);
     const y = atY !== undefined ? atY : (d.flying ? STREAM.wave.range(2.6, 6.2) * CFG.cell : d.r);
     this.enemies.push({
       // the opponent's screen matches machines by id between packets; without
@@ -2844,6 +2919,9 @@ class Game {
       x, y,
       atkTimer: 0, slow: 0, burn: 0, burnDps: 0, pending: 0, flash: 0,
       spawnT: 0,   // 0 while it is still coming through the tear
+      // printed in the field by a carrier rather than walking out of the tear:
+      // those still grow in where they stand
+      split: atX !== undefined,
       healTimer: 0, phase: STREAM.local.range(0, 6.3),
       walk: STREAM.local.range(0, 6.3),   // stride phase — advanced by actual travel
       seen: false,
@@ -2855,7 +2933,8 @@ class Game {
     // a hive splitting mid-field is not the tear opening, so it gets no flash
     if (atX === undefined) {
       this.riftFlash = d.boss ? 1.5 : 1;
-      this.burst(x, y, '#aebbc8', d.boss ? 16 : 5);
+      // the sparks fly off the tear itself, not off the hidden machine behind it
+      this.burst(CFG.cols * CFG.cell + CFG.approach, y, '#aebbc8', d.boss ? 16 : 5);
     }
     if (!CODEX.seen[type]) { CODEX.unlock(type, this.wave); }
   }
@@ -3484,24 +3563,27 @@ class Game {
 
     this.drawBackdrop();
 
-    /* Always frame at least up to the load line plus a row: you have to be
-       able to see the space you are still allowed to build into, otherwise
-       planning the next piece is guesswork. */
-    const top = Math.max(this.topRow() + 2, CFG.overheatRow + 1,
-                         this.piece ? this.piece.cy + 1 : 0);
+    /* Frame the stack, the piece in the air and a few rows of headroom. The
+       load line joins the frame once the stack gets within lineWarnRows of it,
+       which is when there is something to plan around; before that, keeping
+       it in view only shrank the yard into a corner of a wide window. */
+    const stackTop = this.topRow();
+    let top = Math.max(stackTop + 2, CFG.viewMinRows, this.piece ? this.piece.cy + 1 : 0);
+    if (stackTop + CFG.lineWarnRows >= CFG.overheatRow) top = Math.max(top, CFG.overheatRow + 1);
     const needH = (top + 3) * CFG.cell;
     const worldW = CFG.coreW + CFG.cols * CFG.cell + CFG.approach + 20;
     /* Width always fits: the run-up has to be visible or the machines arrive
        from off-screen. Height is allowed to stop zooming out at minZoom, since
-       a tall tower is the player's own doing and the load line stays framed. */
+       a tall tower is the player's own doing. */
     const fitW = (CW - 20) / worldW;
     const fitH = Math.max(CFG.minZoom, (CH - 74) / needH);
-    const target = Math.min(1.3, fitW, fitH);
+    const target = Math.min(CFG.maxZoom, fitW, fitH);
     if (!this.viewScale) this.viewScale = target;
     this.viewScale += (target - this.viewScale) * ease(dt, 4.5);
     this.scale = this.viewScale;
     this.originX = 16 + CFG.coreW * this.scale;
     this.originY = CH - 24;
+    this.applyCoachCamera(dt);
 
     /* Screen shake and the full-screen hit flash are the two effects people
        with motion sensitivity ask to lose first, and CSS cannot reach a canvas.
@@ -3598,6 +3680,78 @@ class Game {
     ctx.fillRect(0, 0, CW, CH);
   }
 
+  /* THE TRAINING CAMERA. While a card is about something on the field, the
+     view leans in on it: the Heart fills the free part of the screen when the
+     card says "this is the Heart", the yard when the card is about building,
+     the tear when the machines first come through. It is a blend on top of
+     the ordinary framing above, so leaving a card eases straight back to it.
+
+     The blend moves the focus point on screen from wherever the normal view
+     has it to where the close-up wants it, while the scale travels
+     geometrically; a plain lerp of two origins swings the subject out of
+     frame halfway through. Input reads originX/scale like everything else, so
+     aiming stays exact while zoomed. */
+  applyCoachCamera(dt) {
+    const want = this.coachView();
+    this.camK = this.camK || 0;
+    this.camK += ((want ? 1 : 0) - this.camK) * ease(dt, 3.4);
+    if (want) {
+      if (!this.cam || this.camK < .03) this.cam = Object.assign({}, want);
+      else {
+        const e = ease(dt, 3.8), c = this.cam;
+        c.x += (want.x - c.x) * e; c.y += (want.y - c.y) * e;
+        c.px += (want.px - c.px) * e; c.py += (want.py - c.py) * e;
+        c.s = Math.exp(Math.log(c.s) + (Math.log(want.s) - Math.log(c.s)) * e);
+      }
+    }
+    if (!this.cam) return;
+    if (this.camK < .002 && !want) { this.cam = null; this.camK = 0; return; }
+    const k = this.camK * this.camK * (3 - 2 * this.camK);       // smoothstep
+    const c = this.cam, s0 = this.scale;
+    const bx = this.originX + c.x * s0, by = this.originY - c.y * s0;
+    const s1 = Math.exp(Math.log(s0) + (Math.log(c.s) - Math.log(s0)) * k);
+    const px = bx + (c.px - bx) * k, py = by + (c.py - by) * k;
+    this.scale = s1;
+    this.originX = px - c.x * s1;
+    this.originY = py + c.y * s1;
+  }
+
+  /* What the current card wants framed, as a world rectangle fitted into the
+     part of the field the card itself is not covering. Null when nothing. */
+  coachView() {
+    const t = this.tutorial;
+    if (!t || ui.tut.hidden || choiceOpen || storyOpen) return null;
+    const s = TUT_STEPS[t.step];
+    if (!s || !s.cam) return null;
+    // a live card leans in only while its reading window runs, then hands the
+    // player the whole field back for the fight
+    if (s.live && !(t.read > 0)) return null;
+    const cell = CFG.cell, boardW = CFG.cols * cell;
+    let l, r, b, tp;
+    if (s.cam === 'core') {
+      l = -CFG.coreW - 40; r = 44; b = -14; tp = CFG.coreH + 56;
+    } else if (s.cam === 'board') {
+      let hi = Math.max(this.topRow() + 1, 3);
+      if (this.piece) hi = Math.max(hi, this.visY + Math.max(...this.piece.cells.map(c => c[1])) + 1);
+      l = -CFG.coreW - 14; r = boardW + 26; b = -16; tp = (hi + 2.2) * cell;
+      // a row card hangs its signboard off the right end of the row: leave room
+      if (s.spot === 'row') r += 190;
+    } else if (s.cam === 'line') {
+      /* the line only means something measured against the ground and the
+         stack, so this one pulls back to take in both, with room on the
+         right for its signboard */
+      l = -CFG.coreW - 14; r = boardW + 210;
+      b = -16; tp = (CFG.overheatRow + 2.6) * cell;
+    } else if (s.cam === 'rift') {
+      const rx = boardW + CFG.approach;
+      l = rx - 230; r = rx + 90; b = -16; tp = 262;
+    } else return null;
+    const a = coachFreeArea();
+    const fw = Math.max(80, a.r - a.l), fh = Math.max(80, a.b - a.t);
+    const sc = Math.max(CFG.minZoom, Math.min(CFG.coachMaxZoom, fw / (r - l), fh / (tp - b)));
+    return { x: (l + r) / 2, y: (b + tp) / 2, s: sc, px: (a.l + a.r) / 2, py: (a.t + a.b) / 2 };
+  }
+
   /* world → screen */
   sx(wx) { return this.originX + wx * this.scale; }
   sy(wy) { return this.originY - wy * this.scale; }
@@ -3605,22 +3759,51 @@ class Game {
 
   drawGround() {
     const w = CFG.cols * CFG.cell + CFG.approach;
-    const x0 = -CFG.coreW - 20;
+    /* The ground runs edge to edge of the canvas, however wide the window is.
+       It used to stop just past the tear, and on a wide screen everything to
+       the right of that was bare canvas. Past the tear it is the harvest's side
+       of the valley: the grass taken off square by square, bare soil left. */
+    const sc = this.scale || 1;
+    const xl = Math.floor(Math.min(-CFG.coreW - 20, -this.originX / sc - 12) / 7) * 7;
+    const xr = Math.max(w + 20, (CW - this.originX) / sc + 12);
+    const bare = w + 26;                     // where the harvested ground begins
+    const depth = Math.max(40, (CH - this.originY) / sc + 4);
 
     // turf: soil band under a lip of grass
     ctx.fillStyle = '#6f5233';
-    ctx.fillRect(x0, 0, w - x0 + 20, 40);
+    ctx.fillRect(xl, 0, xr - xl, depth);
     ctx.fillStyle = '#5f8a3c';
-    ctx.fillRect(x0, 0, w - x0 + 20, 7);
+    ctx.fillRect(xl, 0, bare - xl, 7);
     ctx.fillStyle = '#74a349';
-    ctx.fillRect(x0, 0, w - x0 + 20, 3.5);
+    ctx.fillRect(xl, 0, bare - xl, 3.5);
+
+    if (xr > bare) {
+      // the far side: soil gone grey, and the turf lifted in cell-sized squares
+      ctx.fillStyle = 'rgba(58,54,62,.22)';
+      ctx.fillRect(bare, 0, xr - bare, depth);
+      ctx.fillStyle = '#5d5448';
+      ctx.fillRect(bare, 0, xr - bare, 3);
+      for (let x = bare + 6; x < xr; x += 38) {
+        const n = (x * 13) % 7;
+        if (n < 4) {
+          ctx.fillStyle = 'rgba(36,30,26,.35)';
+          ctx.fillRect(x, 0, 14 + n * 3, 5 + (n % 2) * 2);
+        } else {
+          // a last square of turf the harvest has not reached yet
+          ctx.fillStyle = '#5f8a3c';
+          ctx.fillRect(x, -2, 12, 5);
+          ctx.fillStyle = '#74a349';
+          ctx.fillRect(x, -2, 12, 2);
+        }
+      }
+    }
 
     // blades along the lip — the settlement stands in real grass
     ctx.strokeStyle = 'rgba(96,140,62,.85)';
     ctx.lineWidth = 1.3;
     ctx.beginPath();
-    for (let x = x0; x < w + 20; x += 7) {
-      const h = 4 + ((x * 37) % 5);
+    for (let x = xl; x < bare; x += 7) {
+      const h = 4 + ((Math.abs(x) * 37) % 5);
       const lean = Math.sin(this.time * .8 + x * .09) * 1.8;
       ctx.moveTo(x, 0);
       ctx.lineTo(x + lean, -h);
@@ -3629,9 +3812,10 @@ class Game {
 
     // pebbles in the soil
     ctx.fillStyle = 'rgba(255,255,255,.09)';
-    for (let x = x0; x < w; x += 29) {
-      const yy = 12 + ((x * 13) % 22);
-      ctx.fillRect(x + ((x * 7) % 11), yy, 3, 2);
+    for (let x = xl; x < xr; x += 29) {
+      const ax = Math.abs(x);
+      const yy = 12 + ((ax * 13) % 22);
+      ctx.fillRect(x + ((ax * 7) % 11), yy, 3, 2);
     }
 
     const oy = -CFG.overheatRow * CFG.cell;
@@ -4317,14 +4501,27 @@ class Game {
   drawEnemies() {
     const k = this.readK;
     const groundY = this.sy(0);
+    // the tear line, in screen space; nothing is drawn on its far side
+    const tearX = this.sx(CFG.cols * CFG.cell + CFG.approach);
 
     for (const e of this.enemies) {
       const d = e.def;
       const x = this.sx(e.x), y = this.sy(e.y);
       const em = e.spawnT === undefined ? 1 : e.spawnT;
-      const r = d.r * this.scale * k * (.55 + .45 * em);
+      /* Only a carrier's printlings grow in where they stand. Everything else
+         is full size from the first frame and is revealed by the tear instead:
+         the part still on the far side is clipped away, so it walks out. */
+      const r = d.r * this.scale * k * (e.split ? .55 + .45 * em : 1);
       const hit = e.flash > 0;
-      if (em < 1) ctx.globalAlpha = em;
+      if (e.split && em < 1) ctx.globalAlpha = em;
+      // the aura is the widest thing drawn, so it decides when clipping ends
+      const crossing = !e.split && x + r * 1.8 > tearX;
+      if (crossing) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-40, -40, Math.max(0, tearX + 40), CH + 80);
+        ctx.clip();
+      }
 
       // healer link lines, drawn under everyone
       if (d.heals) {
@@ -4390,6 +4587,24 @@ class Game {
         }
       }
       ctx.globalAlpha = 1;
+      if (crossing) {
+        ctx.restore();
+        /* the seam where the body meets the tear: a cold rim of light down the
+           cut, brightest while most of the machine is still on the far side */
+        const inside = Math.min(1, Math.max(0, (x + r - tearX) / (2 * r)));
+        if (inside > 0) {
+          const hgt = r * (d.flying ? 1.3 : 1.45);
+          const a = .35 + inside * .55;
+          ctx.fillStyle = 'rgba(142,159,216,' + (a * .45).toFixed(3) + ')';
+          ellipse(tearX, y, Math.max(3, r * .28), hgt); ctx.fill();
+          ctx.strokeStyle = 'rgba(238,246,255,' + a.toFixed(3) + ')';
+          ctx.lineWidth = Math.max(1.5, r * .12);
+          ctx.beginPath();
+          ctx.moveTo(tearX, y - hgt);
+          ctx.quadraticCurveTo(tearX + r * .18 * Math.sin(this.time * 9 + e.phase), y, tearX, y + hgt);
+          ctx.stroke();
+        }
+      }
     }
   }
 
@@ -4504,32 +4719,113 @@ class Game {
   /* WHERE THE COACH IS POINTING. The card names a target and this draws the
      light on it, so "the spring on the left is the Heart" stops being a
      sentence the player has to solve. Buttons and stats are lit in CSS; these
-     four live on the canvas and move with the camera. */
+     live on the canvas and move with the camera.
+
+     A ring alone only changed a colour on something the player still had to
+     find, so every spot also carries its name on a signboard in large type,
+     next to the thing itself, popping in when the card opens. */
   drawCoachSpot() {
+    this.coachLabelBox = null;
     const t = this.tutorial;
     if (!t || ui.tut.hidden) return;
     const s = TUT_STEPS[t.step];
     if (!s || !s.spot) return;
-    const cell = CFG.cell;
+    const cell = CFG.cell, boardW = CFG.cols * cell;
+    let lab = null;
 
     if (s.spot === 'core') {
-      this.coachRing(this.sx(-CFG.coreW / 2), this.sy(CFG.coreH * .55),
-                     Math.max(CFG.coreW, CFG.coreH) * .58 * this.scale + 12);
+      const x = this.sx(-CFG.coreW / 2), y = this.sy(CFG.coreH * .55);
+      const r = Math.max(CFG.coreW, CFG.coreH) * .58 * this.scale + 12;
+      this.coachRing(x, y, r);
+      lab = { x, y, r, side: 'above' };
     } else if (s.spot === 'rift') {
-      this.coachRing(this.sx(CFG.cols * cell + CFG.approach - 10), this.sy(cell * 1.1), 46);
+      // ring the whole tear, not a spot at its foot
+      const x = this.sx(boardW + CFG.approach), y = this.sy(115);
+      const ry = 115 * this.scale + 16, rx = Math.max(34, ry * .42);
+      this.coachRing(x, y, rx, ry);
+      lab = { x, y, r: ry, side: 'above' };
     } else if (s.spot === 'piece' && this.piece) {
       const p = this.piece;
       let sum = 0, sumY = 0;
       for (const [cx, cy] of p.cells) { sum += cx; sumY += cy; }
       const n = p.cells.length;
-      this.coachRing(this.sx((p.cx + sum / n + .5) * cell),
-                     this.sy((this.visY + sumY / n + .5) * cell), cell * 1.5 * this.scale + 10);
+      const x = this.sx((p.cx + sum / n + .5) * cell), y = this.sy((this.visY + sumY / n + .5) * cell);
+      const r = cell * 1.5 * this.scale + 10;
+      this.coachRing(x, y, r);
+      lab = { x, y, r, side: 'above' };
     } else if (s.spot === 'row') {
-      this.coachBox(this.sx(0), this.sy(cell), CFG.cols * cell * this.scale, cell * this.scale);
+      this.coachBox(this.sx(0), this.sy(cell), boardW * this.scale, cell * this.scale);
+      lab = { x: this.sx(boardW) + 16, y: this.sy(cell / 2), r: 0, side: 'right' };
     } else if (s.spot === 'line') {
       const y = this.sy(CFG.overheatRow * cell);
-      this.coachBox(this.sx(0), y - 9, CFG.cols * cell * this.scale, 18);
+      this.coachBox(this.sx(0), y - 9, boardW * this.scale, 18);
+      lab = { x: this.sx(boardW) + 16, y, r: 0, side: 'right', ax: this.sx(boardW / 2) };
+    } else if (s.spot === 'store' && this.holdBox) {
+      const b = this.holdBox;
+      this.coachBox(b.x, b.y, b.w, b.h);
+      lab = { x: b.x + b.w / 2, y: b.y + b.h / 2, r: b.h / 2 + 6, side: 'below' };
     }
+    if (!lab || !s.label && s.spot !== 'store') return;
+    const name = s.spot === 'store' ? T('hold_touch')
+      : s.label === 'piece' ? (this.piece ? turretName(TURRETS[this.piece.type]) : '')
+      : s.label === 'core' ? T('core') : T('cl_' + s.label);
+    if (name) this.coachLabel(name, lab);
+  }
+
+  /* The signboard: the target's name in display type big enough to read from
+     across the room, on a parchment plate with a notch pointing at the thing.
+     It pops in over a third of a second when the card opens and never covers
+     the card itself. */
+  coachLabel(text, at) {
+    const t = this.tutorial;
+    const p = Math.min(1, (t && t.since || 0) / .38);
+    const back = 1 + 2.70158 * Math.pow(p - 1, 3) + 1.70158 * Math.pow(p - 1, 2);
+    const pop = calm ? 1 : .35 + .65 * back;
+    // big, but not bigger than a narrow phone field can carry
+    const fs = Math.round(Math.max(20, Math.min(38, CH * .068, CW * .06)));
+    ctx.save();
+    ctx.font = '600 ' + fs + 'px ' + FD;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    const txt = String(text).toUpperCase();
+    const w = ctx.measureText(txt).width + 34, h = fs + 18;
+    const free = coachFreeArea();
+    let cx = at.x, cy, notch = 'down';
+    if (at.side === 'right' && at.x + w > Math.min(CW - 8, free.r) && at.ax !== undefined) {
+      // no room beside it on a narrow field: stand over the middle of it instead
+      cx = at.ax; cy = at.y - h / 2 - 16; notch = 'down';
+    } else if (at.side === 'right') { cx = at.x + w / 2; cy = at.y; notch = 'left'; }
+    else if (at.side === 'below') { cy = at.y + at.r + h / 2 + 12; notch = 'up'; }
+    else {
+      cy = at.y - at.r - h / 2 - 12;
+      if (cy - h / 2 < 6) { cy = at.y + at.r + h / 2 + 12; notch = 'up'; }
+      if (cy + h / 2 > CH - 6) { cx = at.x + at.r + w / 2 + 14; cy = at.y; notch = 'left'; }
+    }
+    const minX = w / 2 + 8, maxX = Math.max(minX, Math.min(CW - 8, free.r) - w / 2);
+    const shifted = Math.max(minX, Math.min(maxX, cx));
+    if (notch === 'left' && shifted !== cx) notch = 'none';
+    cx = shifted;
+    cy = Math.max(h / 2 + 6, Math.min(CH - h / 2 - 6, cy));
+    if (!calm) cy += Math.sin(this.time * 2.6) * 2.2;
+
+    this.coachLabelBox = { l: cx - w / 2 - 12, r: cx + w / 2 + 12, t: cy - h / 2 - 12, b: cy + h / 2 + 12 };
+    ctx.translate(cx, cy);
+    ctx.scale(pop, pop);
+    ctx.globalAlpha = Math.min(1, p * 2.5);
+    ctx.beginPath();
+    rr(-w / 2, -h / 2, w, h, 10);
+    ctx.fillStyle = 'rgba(255,250,236,.97)'; ctx.fill();
+    ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(47,100,64,.95)'; ctx.stroke();
+    // the notch, pointing at the target
+    ctx.fillStyle = 'rgba(47,100,64,.95)';
+    ctx.beginPath();
+    if (notch === 'down') { ctx.moveTo(-9, h / 2 - 1); ctx.lineTo(9, h / 2 - 1); ctx.lineTo(0, h / 2 + 10); }
+    else if (notch === 'up') { ctx.moveTo(-9, -h / 2 + 1); ctx.lineTo(9, -h / 2 + 1); ctx.lineTo(0, -h / 2 - 10); }
+    else if (notch === 'left') { ctx.moveTo(-w / 2 + 1, -9); ctx.lineTo(-w / 2 + 1, 9); ctx.lineTo(-w / 2 - 10, 0); }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2f6440';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, 0, 1);
+    ctx.restore();
   }
 
   /* One dashed ice-green outline, breathing, in two weights so it reads over
@@ -4548,10 +4844,11 @@ class Game {
     draw(pulse);
     ctx.restore();
   }
-  coachRing(x, y, r) {
+  coachRing(x, y, r, ry) {
     this.coachStroke(pulse => {
       ctx.beginPath();
-      ctx.arc(x, y, r + pulse * 4, 0, 6.3);
+      if (ry) ctx.ellipse(x, y, r + pulse * 4, ry + pulse * 4, 0, 0, 6.3);
+      else ctx.arc(x, y, r + pulse * 4, 0, 6.3);
       ctx.stroke();
     });
   }
@@ -4567,7 +4864,9 @@ class Game {
     const BW = 48, BH = 38, GAP = 6;
     const stripW = BW * 4 + GAP * 3 + 14;
     const fieldC = this.originX + CFG.cols * CFG.cell * this.scale / 2;
-    const x0 = Math.round(Math.min(Math.max(fieldC - stripW / 2, 8), CW - stripW - 8));
+    // while the training card floats top right, the strip keeps out from under it
+    const stripR = this.tutorial ? Math.min(CW, coachFreeArea().r + 10) : CW;
+    const x0 = Math.round(Math.min(Math.max(fieldC - stripW / 2, 8), stripR - stripW - 8));
     const y0 = 18;
 
     const box = (x, y, type, size, dim) => {
@@ -4592,6 +4891,7 @@ class Game {
     ctx.fillStyle = '#7d6b53';
     ctx.fillText(TT('hold'), x0, y0 - 5);
     box(x0, y0, this.hold, 8, this.holdUsed);
+    this.holdBox = { x: x0, y: y0, w: BW, h: BH };   // the training card points at it
 
     const nx = x0 + BW + 14;
     ctx.fillStyle = '#7d6b53';
@@ -4604,13 +4904,15 @@ class Game {
     ctx.font = '600 12px ' + FD;
     ctx.fillText(T('sh_' + nd.key), nx, y0 + BH + 13);
 
-    // strain / limit markers, pinned to the right edge of the canvas
+    // strain / limit markers, pinned to the right edge of the canvas; they
+    // stand down while the training signboard is naming the same line
+    const namingLine = this.tutorial && TUT_STEPS[this.tutorial.step].spot === 'line';
     ctx.font = '700 9px ' + FM;
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(150,45,30,.95)';
     const ry = this.sy(CFG.overheatRow * CFG.cell), ly = this.sy(CFG.heightLimit * CFG.cell);
-    if (ry > 12 && ry < CH) ctx.fillText(T('strain'), CW - 8, ry - 4);
-    if (ly > 12 && ly < CH) ctx.fillText(T('limit'), CW - 8, ly - 4);
+    if (!namingLine && ry > 12 && ry < CH) ctx.fillText(T('strain'), CW - 8, ry - 4);
+    if (!namingLine && ly > 12 && ly < CH) ctx.fillText(T('limit'), CW - 8, ly - 4);
     ctx.textAlign = 'left';
 
     if (this.overheat > 0 && !this.gameOver) {
@@ -4671,19 +4973,23 @@ class Game {
     if (fitW > CW - 24) { fs = Math.max(12, fs * (CW - 24) / fitW); ctx.font = '600 ' + fs.toFixed(1) + 'px ' + FD; }
     /* centred on the field, unless the floating coach card is sitting on that
        spot: then centred on the sky left of the card, clamped to the canvas */
-    let bx = CW / 2;
+    let bx = CW / 2, by = CH * 0.3;
+    const half = ctx.measureText(b.text).width / 2 + 10;
     const cl = this.tutorial ? coachFloatLeft() : null;
-    if (cl !== null) {
-      const half = ctx.measureText(b.text).width / 2 + 10;
-      if (bx + half > cl) bx = Math.max(half, Math.min(bx, cl - half));
+    if (cl !== null && bx + half > cl) bx = Math.max(half, Math.min(bx, cl - half));
+    /* and around a training signboard: over it if that clears the piece
+       strip, otherwise under it */
+    const lb = this.tutorial && this.coachLabelBox;
+    if (lb && bx + half > lb.l && bx - half < lb.r && by + 8 > lb.t && by - fs < lb.b) {
+      by = lb.t - 8 - fs > 80 ? lb.t - 8 : Math.min(CH - 12, lb.b + fs + 4);
     }
     // a cream outline keeps banner text legible over sky, grass or a crowd
     ctx.lineWidth = 4.5;
     ctx.strokeStyle = 'rgba(255,250,232,.92)';
     ctx.lineJoin = 'round';
-    ctx.strokeText(b.text, bx, CH * 0.3);
+    ctx.strokeText(b.text, bx, by);
     ctx.fillStyle = b.color;
-    ctx.fillText(b.text, bx, CH * 0.3);
+    ctx.fillText(b.text, bx, by);
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
@@ -4822,7 +5128,7 @@ const ui = {
   coins: $('coins'), coreHp: $('coreHp'), wave: $('wave'), armory: $('armory'),
   hpBar: $('hpBar'), buyBtn: $('buyBtn'), repairBtn: $('repairBtn'),
   upkeep: $('upkeep'), upkeepStat: $('upkeepStat'),
-  pauseBtn: $('pauseBtn'), muteBtn: $('muteBtn'), buyT: $('buyT'), repairT: $('repairT'),
+  pauseBtn: $('pauseBtn'), muteBtn: $('muteBtn'), fsBtn: $('fsBtn'), buyT: $('buyT'), repairT: $('repairT'),
   abBell: $('abBell'), abBellN: $('abBellN'), abBellS: $('abBellS'), abBellCd: $('abBellCd'),
   abRally: $('abRally'), abRallyN: $('abRallyN'), abRallyS: $('abRallyS'), abRallyCd: $('abRallyCd'),
   abMend: $('abMend'), abMendN: $('abMendN'), abMendS: $('abMendS'), abMendCd: $('abMendCd'),
@@ -4933,6 +5239,7 @@ function applyLanguage() {
   // the sound labels belong to this pass too: switching EN -> RU used to leave
   // the mute button announcing "Sound on" until the next time it was touched
   syncMuteButtons();
+  syncFullscreenButton();
   syncModal();
   resize();
 }
@@ -5352,20 +5659,20 @@ function takeChoice(u) {
  * at nothing is a card the player has to go hunting for.
  */
 const TUT_STEPS = [
-  { k: 'tu1', spot: 'core' },
-  { k: 'tu2', el: '#buyBtn', check: g => !!g.piece || g.placed > 0 },
-  { k: 'tu3', spot: 'piece', check: g => g.rotations > 0 || g.moves > 2 },
-  { k: 'tu_store', check: g => g.stored > 0 },
-  { k: 'tu4', spot: 'piece', check: g => g.placed >= 1 },
-  { k: 'tu5', spot: 'row', check: g => g.placed >= 4 },
-  { k: 'tu6', spot: 'row', check: g => g.linesCleared >= 1 },
+  { k: 'tu1', spot: 'core', cam: 'core', label: 'core' },
+  { k: 'tu2', el: '#buyBtn', cam: 'board', check: g => !!g.piece || g.placed > 0 },
+  { k: 'tu3', spot: 'piece', cam: 'board', label: 'piece', check: g => g.rotations > 0 || g.moves > 2 },
+  { k: 'tu_store', spot: 'store', cam: 'board', el: '#tHold', check: g => g.stored > 0 },
+  { k: 'tu4', spot: 'piece', cam: 'board', label: 'piece', check: g => g.placed >= 1 },
+  { k: 'tu5', spot: 'row', cam: 'board', label: 'front', check: g => g.placed >= 4 },
+  { k: 'tu6', spot: 'row', cam: 'board', label: 'full', check: g => g.linesCleared >= 1 },
   { k: 'tu_salvage', el: '#techStat' },
-  { k: 'tu7', spot: 'line' },
+  { k: 'tu7', spot: 'line', cam: 'line', label: 'line' },
   /* The heal step waited for `repairs > 0` on a Heart that starts full, and
      repair() returns immediately at full health — so the practice it asked for
      could not be done, only skipped. The step now opens by scratching the
      Heart itself: a scripted dent, not an attack, and something to mend. */
-  { k: 'tu8', spot: 'core', el: '#repairBtn', check: g => g.repairs > 0,
+  { k: 'tu8', spot: 'core', cam: 'core', label: 'core', el: '#repairBtn', check: g => g.repairs > 0,
     enter: g => {
       if (g.hp <= g.maxHp * 0.65) return;
       const dent = Math.round(g.maxHp * 0.35);
@@ -5377,7 +5684,7 @@ const TUT_STEPS = [
   /* From here the clock is allowed to run. `canCallWave` reads the same flag,
      so the bar only becomes callable once the card that explains it is up. */
   { k: 'tu_call', live: true, el: '#waveBar', check: g => g.phase === 'fight' },
-  { k: 'tu9', live: true, spot: 'rift' },
+  { k: 'tu9', live: true, spot: 'rift', cam: 'rift', label: 'rift' },
   { k: 'tu_bell', live: true, el: '#abBell', check: g => g.bells > 0 },
   { k: 'tu_rally', live: true, el: '#abRally', check: g => g.rallies > 0 },
   /* No check on mending: with an undamaged wall the price is zero and the
@@ -5434,17 +5741,29 @@ function tutTimeScale() {
    drawCoachSpot() over in the renderer. */
 let coachLit = [];
 function setCoachLit(sel) {
-  for (const el of coachLit) cls(el, 'coachlit', false);
+  for (const el of coachLit) {
+    cls(el, 'coachlit', false);
+    el.style.removeProperty('--lit-origin'); el.style.removeProperty('--lit-dx');
+  }
   coachLit = [];
   if (!sel) return;
   for (const one of sel.split(',')) {
     const el = document.querySelector(one.trim());
-    if (el) { cls(el, 'coachlit', true); coachLit.push(el); }
+    if (!el) continue;
+    /* grow away from the nearest edge of the window, so a stat in the corner
+       swells into the screen rather than off it */
+    const r = el.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+    const ox = r.left < vw * .22 ? 'left' : r.right > vw * .78 ? 'right' : 'center';
+    const oy = r.top < vh * .3 ? 'top' : r.bottom > vh * .7 ? 'bottom' : 'center';
+    el.style.setProperty('--lit-origin', ox + ' ' + oy);
+    // the plate is wider than the element, so step in off a window edge
+    el.style.setProperty('--lit-dx', ox === 'left' && r.left < 20 ? '12px' : ox === 'right' && vw - r.right < 20 ? '-12px' : '0px');
+    cls(el, 'coachlit', true); coachLit.push(el);
   }
 }
 
 function startTutorial() {
-  game.tutorial = { step: 0, read: 0, readMax: 0 };
+  game.tutorial = { step: 0, read: 0, readMax: 0, since: 0 };
   game.coins = 420;          // a sandbox needs room to experiment
   ui.tut.hidden = false;
   renderTutorial();
@@ -5462,6 +5781,7 @@ function tutorialGo(n) {
      are already read in a frozen sandbox, and slowing a frozen field would
      just make the clouds crawl for no reason. */
   t.readMax = t.read = (s.live && !s.done) ? tutReadTime(s) : 0;
+  t.since = 0;               // the field signboard pops in from this
   SFX.step();
   renderTutorial();
 }
@@ -5527,6 +5847,7 @@ function endTutorial(skipped) {
 function tutorialTick(dt) {
   const t = game.tutorial;
   if (!t) return;
+  t.since = (t.since || 0) + dt;
   if (t.read > 0 && !game.paused && !storyOpen && !choiceOpen) {
     t.read = Math.max(0, t.read - dt);
     renderReadWindow();
@@ -5729,6 +6050,41 @@ function unlockAudio() { SFX.unlock(); syncMuteButtons(); }
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 
+/* FULL SCREEN. The page already fills the window; this takes the browser's
+   own bars away too. Offered only where the browser can do it (an iPhone
+   cannot, for anything but video), and the icon follows the real state, since
+   Esc leaves full screen without asking the page. */
+const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const inFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFullscreen() {
+  try {
+    if (inFullscreen()) {
+      const p = (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      const el = document.documentElement;
+      const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+}
+function syncFullscreenButton() {
+  const on = inFullscreen();
+  const btn = $('fsBtn'), row = $('fsRow'), sheet = $('fsSheetBtn');
+  if (btn) {
+    btn.hidden = !FS_OK;
+    cls(btn, 'full', on);
+    att(btn, 'aria-label', T(on ? 'a_fsOff' : 'a_fsOn'));
+    btn.title = T(on ? 'a_fsOff' : 'a_fsOn');
+  }
+  // the pause sheet carries the same switch for phones, where the HUD has no room
+  if (row) row.hidden = !FS_OK;
+  if (sheet) { put(sheet, T(on ? 'fs_off' : 'fs_on')); att(sheet, 'aria-pressed', String(on)); }
+  put($('lScreen'), T('screen'));
+}
+document.addEventListener('fullscreenchange', syncFullscreenButton);
+document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+
 function syncMuteButtons() {
   const off = SFX.muted || SFX.vol === 0;
   const label = T(off ? 'a_soundOff' : 'a_soundOn');
@@ -5883,6 +6239,8 @@ ui.abBell.addEventListener('click', () => game.ringBell());
 ui.abRally.addEventListener('click', () => game.soundRally());
 ui.abMend.addEventListener('click', () => game.mendWall());
 ui.muteBtn.addEventListener('click', () => { SFX.unlock(); SFX.toggleMute(); syncMuteButtons(); });
+ui.fsBtn.addEventListener('click', () => { SFX.ui(); toggleFullscreen(); });
+$('fsSheetBtn').addEventListener('click', () => { SFX.ui(); toggleFullscreen(); });
 ui.waveBar.addEventListener('click', () => {
   if (storyOpen || choiceOpen) return;
   if (game.gameOver) startGame(false); else game.startWave(true);
@@ -6879,6 +7237,7 @@ game = new Game();
 applySettings();
 applyLanguage();
 syncMuteButtons();
+syncFullscreenButton();
 showMenu();
 
 let last = performance.now();
