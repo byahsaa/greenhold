@@ -64,6 +64,15 @@
     background: linear-gradient(180deg, #cfe6ef 0%, #e7dcc2 38%, #dfd2b4 100%);
     font-family: var(--f-ui); display: flex; justify-content: center;
     align-items: flex-start; }
+  /* The body is a flex item of <html>, so without a width of its own it sized
+     itself to its content, and part of that content is the canvas, whose
+     natural width is its own pixel buffer. resize() sized the buffer from the
+     page, the page from the buffer: the field crept wider a few pixels a frame,
+     the HUD wrapped and unwrapped, the field height flipped with it, and every
+     flip cleared the canvas. On some windows the field sat blank. A definite
+     width breaks the loop. The game takes the whole window: the camera below
+     decides how much of that width the yard fills. */
+  body { width: 100%; }
   /* The padding runs through these three so a media query can retune the
      numbers without dropping the safe-area insets underneath them. The insets
      are zero on everything except a notched phone, so the desktop padding is
@@ -118,6 +127,8 @@
   .btn.warn .warn { display: block; color: var(--danger); }
   .btn.muted .off, .btn.paused .off { display: block; }
   .btn.muted .on, .btn.paused .on { display: none; }
+  .btn.full .off { display: block; }
+  .btn.full .on { display: none; }
   /* a keyboard player currently sees nothing at all move while tabbing */
   .btn:focus-visible, .abil:focus-visible, .mbtn:focus-visible, .card:focus-visible {
     outline: 2px solid var(--ice); outline-offset: 2px; }
@@ -232,9 +243,9 @@
 
   /* Overlay stacking order, in one place. Everything that can cover the field
      is listed here so a new layer cannot quietly slip under an older one:
-     pause sheet 20 < story card 30 < upgrade choice 40. The coach card used to
-     head this list; it now sits under the field instead of over it and so
-     covers nothing. */
+     coach card 12 < pause sheet 20 < story card 30 < upgrade choice 40. The
+     coach floats over the empty sky on a wide field and is a row under it on
+     a narrow one; either way every sheet covers it. */
   .modal   { z-index: 20 }
   .sectorcard { z-index: 30 }
   .choice  { z-index: 40 }
@@ -464,42 +475,63 @@
   .card.risk:hover { border-color: rgba(191,68,51,.85); }
 
   /* ----------------------------- tutorial --------------------------------
-     The coach is a ROW UNDER THE FIELD, not a card on top of it.
+     The coach is a small card, and where it sits depends on the room.
 
-     As a floating card it sat exactly on the strip of ground the machines walk
-     along: 470x157 over an 830x525 field, covering the whole approach lane.
-     The wave the card was explaining happened behind the card, so the Heart
-     lost health and the screen flashed red while nothing was ever seen
-     arriving. resize() gives the canvas whatever is left under the stage, so a
-     row here costs the field a little height and hides none of it.
+     .float (a wide field): pinned in the empty sky at the top right of the
+     field. Nothing is played up there: the yard and the piece strip are on the
+     left, the machines walk the ground, the banner moves aside for it (see
+     drawBanner). It takes no layout height, so the field keeps its full size.
 
-     min-height keeps the field from jumping a few pixels every time a step
-     with a shorter line comes up. */
-  .tut { position: relative; display: flex; gap: 12px; align-items: center;
-    min-height: 82px; padding: 10px 14px 15px; border-radius: 12px;
-    border: 1px solid rgba(93,156,65,.55); background: rgba(252,247,234,.96);
+     Without .float (a phone, a narrow or short window): a compact row under
+     the field, because a narrow field has no empty corner to spare.
+
+     Either way the text is held to a readable measure. The old row stretched
+     one sentence across the whole window in two very long lines. */
+  .tut { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "hd hd" "txt acts"; gap: 5px 12px; align-items: end;
+    padding: 9px 12px 13px; border-radius: 12px;
+    border: 1px solid rgba(93,156,65,.55); background: rgba(252,247,234,.97);
     box-shadow: 0 2px 12px rgba(70,55,30,.12); }
   .tut[hidden] { display: none; }
-  .tut .num { flex: none; width: 27px; height: 27px; border-radius: 8px; display: grid;
+  .tut.float { position: absolute; z-index: 12; top: 12px; right: 58px;
+    width: min(340px, calc(100% - 90px));
+    grid-template-columns: minmax(0, 1fr); grid-template-areas: "hd" "txt" "acts";
+    gap: 7px; padding: 11px 14px 15px; box-shadow: 0 10px 28px rgba(70,55,30,.22);
+    animation: tutIn .22s ease; }
+  @keyframes tutIn { from { opacity: 0; transform: translateY(-6px) } to { opacity: 1; transform: none } }
+  .tut .hd { grid-area: hd; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .tut .num { flex: none; width: 22px; height: 22px; border-radius: 6px; display: grid;
     place-items: center; background: rgba(93,156,65,.18); border: 1px solid rgba(93,156,65,.5);
-    font-family: var(--f-display); font-size: 14px; color: #3c6b28; letter-spacing: 0; }
-  .tut .num .ico { width: 17px; height: 17px; }
-  .tut .body { flex: 1 1 auto; min-width: 0; }
-  .tut .hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .tut .ttl { font-family: var(--f-display); font-size: 16px; font-weight: 500; letter-spacing: 1.8px;
-    text-transform: uppercase; color: var(--ink-ice); }
-  .tut .txt { font-size: 11px; line-height: 1.55; color: #4d3c28; margin-top: 3px; }
-  .tut .txt b { color: #8a5a12; font-weight: 700; }
-  .tut .acts { flex: none; display: flex; gap: 7px; align-items: center; }
-  .tut .acts .btn { padding: 8px 13px; font-size: 10px; }
+    font-family: var(--f-display); font-size: 12px; color: #3c6b28; letter-spacing: 0; }
+  .tut .num .ico { width: 14px; height: 14px; }
+  .tut .ttl { flex: 1 1 auto; min-width: 0; font-family: var(--f-display); font-size: 17px;
+    font-weight: 500; letter-spacing: 1.4px; line-height: 1.15; text-transform: uppercase;
+    color: var(--ink-ice); }
+  /* skipping is always one tap away, but it is the quiet option, not a second
+     button shouting next to the one the card actually wants pressed */
+  .tut .skip { flex: none; padding: 4px 2px; border: 0; background: none; cursor: pointer;
+    font-family: var(--f-ui); font-size: 10px; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--ink-dim);
+    text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(95,81,64,.4); }
+  .tut .skip:hover { color: var(--ink-danger); text-decoration-color: currentColor; }
+  .tut .skip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
+  .tut .txt { grid-area: txt; max-width: 50ch; font-size: 11.5px; line-height: 1.6;
+    color: #4d3c28; text-wrap: pretty; }
+  /* the terms a card is teaching (upkeep, salvage, the keys to press) stand a
+     size up from the sentence around them instead of only changing colour */
+  .tut .txt b { color: #8a5a12; font-weight: 800; font-size: 1.18em; letter-spacing: .2px; }
+  .tut .acts { grid-area: acts; display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; min-width: 0; }
+  .tut.float .acts { justify-content: space-between; }
+  .tut .acts .btn { padding: 7px 14px; font-size: 10.5px; margin-left: auto; }
   /* how far through the script you are: a hairline along the bottom edge */
-  .tut .prog { position: absolute; left: 13px; right: 13px; bottom: 7px; height: 3px;
+  .tut .prog { position: absolute; left: 12px; right: 12px; bottom: 6px; height: 3px;
     border-radius: 2px; background: rgba(120,92,58,.2); overflow: hidden; }
   .tut .prog i { display: block; height: 100%; width: 100%; background: var(--ice);
     transform: scaleX(0); transform-origin: left center; transition: transform .3s; }
-  .tut.done { border-color: rgba(60,230,160,.55); }
+  .tut.done { border-color: rgba(93,156,65,.8); }
   .tut.done .num { background: rgba(93,156,65,.2); border-color: rgba(93,156,65,.55); color: #3c6b28; }
-  .tut.done .ttl { color: var(--good); }
+  .tut.done .ttl { color: var(--ink-good); }
 
   /* The slow-motion badge. A card that lands mid-wave used to be unreadable:
      five machines crossed the field in the time it takes to read three lines.
@@ -508,22 +540,51 @@
   .tut .slow { display: inline-flex; align-items: center; gap: 6px; flex: none;
     padding: 2px 8px 3px; border-radius: 999px; border: 1px solid rgba(207,138,36,.55);
     background: rgba(255,240,205,.9); color: #8a5a12;
-    font-size: 9px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase; }
+    font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
   .tut .slow[hidden] { display: none; }
-  .tut .slow i { display: block; width: 34px; height: 3px; border-radius: 2px;
+  .tut .slow i { display: block; width: 30px; height: 3px; border-radius: 2px;
     background: rgba(138,90,18,.25); overflow: hidden; }
   .tut .slow i b { display: block; height: 100%; width: 100%; background: #cf8a24;
     transform-origin: left center; }
+  /* in the row the badge shares a narrow column with the button, so it keeps
+     its short name */
+  .tut .slow .lg { display: none; }
+  .tut.float .slow .lg { display: inline; }
+  .tut.float .slow .sh { display: none; }
+  .tut:not(.float) .acts { flex-direction: column; align-items: flex-end; gap: 5px; }
 
   /* What the card is pointing at, lit on the thing itself. World objects get
-     the same ring drawn on the canvas; this is for the buttons and the HUD. */
-  .coachlit { position: relative; box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 7px rgba(93,156,65,.22); }
+     a ring and a signboard drawn on the canvas; this is for the buttons and
+     the HUD.
+
+     An outline alone only recoloured a label the player still had to find:
+     "Upkeep" stayed 11px tall in a row of six other 11px labels. So the lit
+     thing now grows, on a parchment plate that lifts it off its neighbours,
+     big enough to read at a glance. It grows from the side nearest the screen
+     edge (setCoachLit sets --lit-origin) so it never runs off the window, and
+     a stat lets clicks through, since it has nothing to press. */
+  .coachlit { position: relative; z-index: 50; border-radius: 10px;
+    transform: translateX(var(--lit-dx, 0px)) scale(var(--lit-scale, 1.35));
+    transform-origin: var(--lit-origin, center top);
+    transition: transform .3s cubic-bezier(.3, 1.6, .5, 1);
+    background-color: #fffaf0 !important;
+    box-shadow: 0 0 0 3px rgba(93,156,65,.95), 0 0 0 9px rgba(93,156,65,.2), 0 12px 28px rgba(60,45,25,.3); }
   .coachlit:not(.stat) { border-color: rgba(93,156,65,.9) !important; }
+  .stat.coachlit { --lit-scale: 1.9; pointer-events: none;
+    box-shadow: 0 0 0 6px #fffaf0, 0 0 0 8px rgba(93,156,65,.95), 0 0 0 13px rgba(93,156,65,.2),
+                0 12px 28px rgba(60,45,25,.3); }
+  .abil.coachlit { --lit-scale: 1.22; }
+  /* the bar already spans the window, so it stays put and its words grow
+     inside it instead of the whole bar running off both edges */
+  .wavebar.coachlit { --lit-scale: 1; --lit-dx: 0px !important; }
+  .wavebar.coachlit .wavetext { transform: scale(1.28); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+  .tbtn.coachlit { --lit-scale: 1.25; }
   html:not(.calm) .coachlit { animation: coachPulse 1.5s ease-in-out infinite; }
   @keyframes coachPulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 5px rgba(93,156,65,.2); }
-    50%      { box-shadow: 0 0 0 2px rgba(93,156,65,.9), 0 0 0 10px rgba(93,156,65,0); }
+    0%, 100% { outline: 0 solid rgba(93,156,65,.0); }
+    50%      { outline: 6px solid rgba(93,156,65,.18); }
   }
+  html:not(.calm) .coachlit { outline-offset: 10px; }
 
   /* Text that exists only for assistive tech: clipped to nothing, never
      display:none, which would take it out of the accessibility tree too. */
@@ -557,14 +618,12 @@
     .codexlist { max-height: 46vh; }
     .cards { gap: 8px; }
     .card { flex: 1 1 100%; max-width: none; }
-    /* the coach folds: text across the full width, then the two buttons under
-       it at a size a thumb can actually hit */
-    .tut { flex-wrap: wrap; gap: 9px 10px; padding: 9px 12px 14px; min-height: 0; }
-    .tut .body { flex: 1 1 200px; }
-    .tut .acts { flex: 1 1 100%; }
-    .tut .acts .btn { flex: 1 1 0; justify-content: center; min-height: 44px; }
-    .tut .ttl { font-size: 15px; }
-    .tut .txt { font-size: 11px; }
+    /* the coach row on a phone: the button keeps a thumb-sized target, the
+       text gets everything else */
+    .tut { gap: 4px 10px; padding: 8px 10px 12px; }
+    .tut .ttl { font-size: 14px; }
+    .tut .txt { font-size: 11px; line-height: 1.55; }
+    .tut .acts .btn { min-height: 44px; min-width: 84px; }
   }
 
   /* Below this the chrome alone eats the viewport: three stacked ability rows,
@@ -645,6 +704,8 @@
      560px rather than the 420px above, because the largest phones report 430.
      ---------------------------------------------------------------------- */
   @media (pointer: coarse) and (max-width: 560px) {
+    /* the phone row is already full; full screen lives in the pause sheet */
+    #fsBtn    { display: none; }
     .hud      { order: 1; }
     .wavebar  { order: 2; }
     .stage    { order: 3; }
@@ -699,6 +760,7 @@
         <button class="btn gold" id="buyBtn"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6.6 2.9 10 5.7 13.4 2.9"/><rect x="4.6" y="7.6" width="10.8" height="10.8" rx="2"/><path d="M7.1 11.4h5.8M7.1 14.6h5.8"/></svg><svg class="ico warn" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3.4 17.4 16.6H2.6Z"/><path d="M10 8.4v3.6"/><circle class="f" cx="10" cy="14.1" r="1"/></svg><span class="t" id="buyT"></span></button>
         <button class="btn good" id="repairBtn"><svg class="ico" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2.6c3.6 4.5 5.4 6.9 5.4 9.2a5.4 5.4 0 0 1-10.8 0c0-2.3 1.8-4.7 5.4-9.2Z"/><path d="M5.4 12.4c1.5-1.4 3.1-1.4 4.6 0s3.1 1.4 4.6 0"/></svg><span class="t" id="repairT"></span></button>
         <button class="btn ico-only" id="muteBtn" title="M"><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 7.9h3.1L10.8 4.3v11.4L6.5 12.1H3.4Z"/><path d="M13.7 7.6a4 4 0 0 1 0 4.8"/><path d="M16 5.3a7.2 7.2 0 0 1 0 9.4"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 7.9h3.1L10.8 4.3v11.4L6.5 12.1H3.4Z"/><path d="m13.6 7.6 4.6 4.8M18.2 7.6l-4.6 4.8"/></svg></button>
+        <button class="btn ico-only" id="fsBtn" hidden><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.6 7.4V3.6h3.8M12.6 3.6h3.8v3.8M16.4 12.6v3.8h-3.8M7.4 16.4H3.6v-3.8"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.4 3.6v3.8H3.6M16.4 7.4h-3.8V3.6M12.6 16.4v-3.8h3.8M3.6 12.6h3.8v3.8"/></svg></button>
         <button class="btn ico-only" id="pauseBtn" title="P"><svg class="ico on" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M7.4 4.4v11.2M12.6 4.4v11.2" stroke-width="2.6"/></svg><svg class="ico off" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6.8 4.3 15.6 10l-8.8 5.7Z"/></svg></button>
       </div>
     </header>
@@ -762,6 +824,10 @@
             <span class="lbl" id="lTouch">Touch controls</span>
             <button class="btn" id="touchBtn" aria-pressed="false"></button>
           </div>
+          <div class="row" id="fsRow" hidden>
+            <span class="lbl" id="lScreen">Screen</span>
+            <button class="btn" id="fsSheetBtn" aria-pressed="false"></button>
+          </div>
           <details>
             <summary id="keysTitle"></summary>
             <dl class="keylist" id="keysList"></dl>
@@ -801,21 +867,19 @@
 
     </div>
 
-    <!-- Training coach. Deliberately a sibling of the stage rather than a
-         child of it: inside, it was an overlay parked on the approach lane,
-         and the machines it was describing walked underneath it. -->
-    <div class="tut" id="tut" hidden>
-      <div class="num" id="tutNum">1</div>
-      <div class="body">
-        <div class="hd">
-          <span class="ttl" id="tutTitle"></span>
-          <span class="slow" id="tutSlow" hidden><span id="tutSlowT"></span><i><b id="tutSlowBar"></b></i></span>
-        </div>
-        <div class="txt" id="tutText"></div>
+    <!-- Training coach. placeCoach() decides where it lives: inside the stage,
+         floating in the empty sky, when the field is wide enough; here, as a
+         row under the field, when it is not. -->
+    <div class="tut" id="tut" role="region" aria-live="polite" aria-labelledby="tutTitle" hidden>
+      <div class="hd">
+        <span class="num" id="tutNum">1</span>
+        <span class="ttl" id="tutTitle"></span>
+        <button type="button" class="skip" id="tutSkip"></button>
       </div>
+      <div class="txt" id="tutText"></div>
       <div class="acts">
+        <span class="slow" id="tutSlow" hidden><span class="lg" id="tutSlowT"></span><span class="sh" id="tutSlowS"></span><i><b id="tutSlowBar"></b></i></span>
         <button class="btn good" id="tutNext"></button>
-        <button class="btn ghost" id="tutSkip"></button>
       </div>
       <div class="prog"><i id="tutProg"></i></div>
     </div>
@@ -1389,6 +1453,12 @@ class SoundEngine {
   incoming() {
     this.tone({ f: 1500, f2: 380, type: 'sine', dur: 2.2, vol: 0.075, atk: 0.14, raw: true });
   }
+  /* a shell batted away by the bell: a hard clang, then a whoosh going up */
+  deflect() {
+    this.tone({ f: 1180, f2: 1560, type: 'triangle', dur: 0.2, vol: 0.12, atk: 0.002, raw: true });
+    this.tone({ f: 640, f2: 1280, type: 'sine', dur: 0.5, vol: 0.06, atk: 0.01, delay: 0.05, raw: true });
+    this.noise({ f: 2400, f2: 5200, dur: 0.35, vol: 0.06, filter: 'bandpass', q: 1.2, atk: 0.01, delay: 0.04, raw: true });
+  }
   impact() {
     this.noise({ f: 700, f2: 70, dur: 0.55, vol: 0.2, filter: 'lowpass', q: .8, atk: 0.008, raw: true });
     this.tone({ f: 110, f2: 34, type: 'sine', dur: 0.5, vol: 0.24, raw: true });
@@ -1463,6 +1533,8 @@ const I18N = {
     m_backSub: 'Back to the settlement',
     pause: 'Pause', mainMenu: 'Main menu', volume: 'Volume',
     a_soundOn: 'Sound on', a_soundOff: 'Sound off',
+    a_fsOn: 'Full screen', a_fsOff: 'Leave full screen',
+    screen: 'Screen', fs_on: 'Full screen', fs_off: 'In a window',
     
 
     cx_title: 'Ledger', cx_story: 'Records', cx_foes: 'Machines', cx_mods: 'Buildings',
@@ -1516,63 +1588,68 @@ const I18N = {
     up_greed_t: 'Work them hard',
 
     bellRung: 'THE BELL RINGS OUT', rallyUp: 'ALL HANDS!',
-    ab_bell: 'Bell', ab_bellS: 'hits every machine, scatters incoming fire',
+    shellKnocked: 'SHELL KNOCKED AWAY!', deflected: 'DEFLECTED!',
+    ab_bell: 'Bell', ab_bellS: 'knocks shells away, hits every machine',
     ab_rally: 'Rally', ab_rallyS: 'everything shoots twice as fast',
     ab_mend: 'Mend wall', ab_mendS: 'patch every building at once',
     ab_ready: 'ready', ab_nothing: 'nothing to mend',
     wearNote: 'buildings wear down while a wave is on the field',
 
-    tut_skip: 'Skip training', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
-    tut_slow: 'Slowed while you read',
+    tut_skip: 'Skip', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
+    tut_slow: 'Slowed while you read', tut_slow_s: 'Slow-mo',
+    cl_front: 'Front row', cl_full: 'Full row', cl_line: 'Load line', cl_rift: 'The Rift', cl_shell: 'Shell!',
     tut_safe: 'TRAINING: THE HEART HOLDS',
     tut_done_t: 'Training done',
-    tut_done_d: 'That is the whole yard. The real thing starts now: waves get bigger, new machines walk out of that ridge, and nothing waits for you. Good luck, builder.',
+    tut_done_d: 'That is everything. Waves only get bigger from here. Good luck!',
     tut_skipped: 'Training skipped, good luck',
 
     tu1_t: 'This is the Heart',
-    tu1_d: 'The spring on the left is the Heart of the settlement. All of this is about keeping it lit. When its bar reaches zero, the run is over.',
-    tu2_t: 'Build something',
-    tu2_d: 'Press <b>SPACE</b> or hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
-    tu2_d_touch: 'Hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
+    tu1_d: 'Guard it. If its water runs out, you lose.',
+    tu2_t: 'Build',
+    tu2_d: 'Press <b>SPACE</b> or <b>Build</b> to get a section.',
+    tu2_d_touch: 'Tap <b>Build</b> to get a section.',
     tu3_t: 'Aim it',
-    tu3_d: 'Hold the <b>left mouse button</b> and drag it along the line, or use <b>A</b> / <b>D</b>. <b>W</b> turns it. The dashed circle is how far that building can reach.',
-    tu3_d_touch: 'Drag your finger across the field and the section follows it. <b>Tap the field</b> to turn it. The dashed circle is how far that building can reach.',
+    tu3_d: 'Move: <b>A</b>/<b>D</b> or drag. Turn: <b>W</b>. The circle is its reach.',
+    tu3_d_touch: '<b>Drag</b> to move it, <b>tap</b> to turn it. The circle is its reach.',
     tu_store_t: 'Keep one back',
-    tu_store_d: 'The section in your hands is not always the one the wall needs. <b>C</b> puts it in store and hands you the next one. Press it again and the two swap.',
-    tu_store_d_touch: '<b>Flick up</b> on the field, or hit <b>Store</b>, and the section goes aside for later. Do it again and the stored one comes back.',
-    tu4_t: 'Set it down',
-    tu4_d: 'Press <b>SPACE</b> again and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
-    tu4_d_touch: '<b>Flick down</b> on the field, or hit <b>Slam</b>, and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
-    tu5_t: 'Make a wall',
-    tu5_d: 'Keep building. Buildings block the walkers as well as shoot them, so a solid front row is armour and firepower at once. Set down three more.',
+    tu_store_d: '<b>C</b> puts this section aside for later.',
+    tu_store_d_touch: '<b>Swipe up</b> or tap <b>Store</b> to keep it for later.',
+    tu4_t: 'Drop it',
+    tu4_d: '<b>SPACE</b> sets it down. It shoots on its own.',
+    tu4_d_touch: '<b>Swipe down</b> or tap <b>Slam</b>. It shoots on its own.',
+    tu5_t: 'Build a wall',
+    tu5_d: 'Buildings block machines and shoot them. Place <b>3 more</b>.',
     tu6_t: 'Close a row',
-    tu6_d: 'Fill a row all the way across the ten columns and it closes: a shockwave knocks down every machine on the field. The row is spent doing it, so those buildings are gone and the stack drops onto the gap. Close a row you can afford to lose.',
-    tu_salvage_t: 'What a closed row leaves',
-    tu_salvage_d: 'A closed row pays stock once, and it pays <b>salvage</b> for good. Salvage raises the health and damage of every building you have and every one you raise after it. It is the only number here that never goes down.',
-    tu7_t: 'Watch the load line',
-    tu7_d: 'The dashed red line is what the ground will bear. Anything stacked above it splits and collapses on its own. Build wide, not tall.',
-    tu8_t: 'Mend the Heart',
-    tu8_d: 'Something got through and the Heart is down. Press <b>R</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
-    tu8_d_touch: 'Something got through and the Heart is down. Hit <b>Heal</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
-    tu_call_t: 'Call them early',
-    tu_call_d: 'The bar above the field counts down to the next wave. <b>ENTER</b> calls it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
-    tu_call_d_touch: 'The bar above the field counts down to the next wave. <b>Tap the bar</b> to call it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
+    tu6_d: 'Fill all <b>10 columns</b>: a blast hits every machine. The row is used up.',
+    tu_salvage_t: 'Salvage',
+    tu_salvage_d: 'Each closed row gives <b>salvage</b>: every building gets stronger for good.',
+    tu7_t: 'Load line',
+    tu7_d: 'Blocks above the <b>red line</b> fall apart. Build wide, not tall.',
+    tu8_t: 'Heal the Heart',
+    tu8_d: 'Press <b>R</b> to heal it with stock.',
+    tu8_d_touch: 'Tap <b>Heal</b> to heal it with stock.',
+    tu_call_t: 'Call the wave',
+    tu_call_d: '<b>ENTER</b> starts it early. Earlier means a bigger reward.',
+    tu_call_d_touch: 'Tap <b>the bar</b> to start early. Earlier means a bigger reward.',
     tu9_t: 'Here they come',
-    tu9_d: 'Your buildings aim and fire on their own. The wall is your job: keep building, and keep it closed.',
-    tu_bell_t: 'The bell',
-    tu_bell_d: '<b>Bell</b> hits every machine on the field at once, shoves them back a step and throws their aim off. It costs no stock and takes 24 seconds to come back. Ring it.',
-    tu_rally_t: 'The horn',
-    tu_rally_d: '<b>Rally</b> has everyone working the cranks twice as fast for a few seconds. Also free, and thirty seconds to come back. Keep it for the moment the front row is about to go.',
+    tu9_d: 'Machines walk out of <b>the Rift</b>. Your buildings fire by themselves.',
+    tu_bell_t: 'Shell incoming!',
+    tu_bell_d: 'Ring the <b>Bell</b> (<b>Q</b>): it knocks shells out of the air.',
+    tu_bell_d_touch: 'Tap <b>Bell</b>: it knocks shells out of the air.',
+    tu_rally_t: 'Rally',
+    tu_rally_d: '<b>E</b>: everyone shoots twice as fast for 6 seconds.',
+    tu_rally_d_touch: '<b>Rally</b>: everyone shoots twice as fast for 6 seconds.',
     tu_mend_t: 'Patch the wall',
-    tu_mend_d: 'Buildings wear down while a wave is breaking on them. <b>Mend wall</b> puts all of them back to full for stock, and the price follows how much damage there is to undo.',
-    tu_held_t: 'Hold it',
-    tu_held_d: 'Keep the wall closed until the last machine is down.',
-    tu_upkeep_t: 'The wall sends a bill',
-    tu_upkeep_d: 'Every wave you hold ends with <b>upkeep</b>. The wall charges you stock simply for standing there, and it charges more the further you get. Come up short and the buildings take the difference out of their own health.',
-    tu_hoard_t: 'Sitting on stock costs too',
-    tu_hoard_d: 'The bill is the larger of two numbers: what your wall costs, and a quarter of whatever stock you are sitting on. A full purse is taxed like a long wall, so put it into building instead of saving it for later.',
-    tu_cards_t: 'Pick one',
-    tu_cards_d: 'A held wave ends with three cards and you take one of them. Each card says what it will do to your own numbers before you commit, so read the line along the bottom. Some of them ask for something back.',
+    tu_mend_d: '<b>F</b> repairs every building at once, for stock.',
+    tu_mend_d_touch: '<b>Mend wall</b> repairs every building at once, for stock.',
+    tu_held_t: 'Hold on',
+    tu_held_d: 'Keep the wall up until the last machine falls.',
+    tu_upkeep_t: 'Upkeep',
+    tu_upkeep_d: 'After each wave the wall costs stock: <b>upkeep</b>. Short of stock? It loses health.',
+    tu_hoard_t: 'Spend your stock',
+    tu_hoard_d: 'Saved-up stock is taxed too. Build with it instead.',
+    tu_cards_t: 'Pick a card',
+    tu_cards_d: 'After each wave take <b>1 of 3</b> upgrades. Red text is the price.',
     /* ---- online: accounts, rooms, and the two-field race ---- */
     m_online: 'Versus', m_onlineSub: 'Same seed, two fields, one long night',
     on_title: 'Versus',
@@ -1709,6 +1786,8 @@ const I18N = {
     m_backSub: '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0432 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u0435',
     pause: 'Пауза', mainMenu: 'Главное меню', volume: 'Громкость',
     a_soundOn: 'Звук включён', a_soundOff: 'Звук выключен',
+    a_fsOn: 'Во весь экран', a_fsOff: 'Выйти из полноэкранного режима',
+    screen: 'Экран', fs_on: 'Во весь экран', fs_off: 'В окне',
     
 
     cx_title: '\u041a\u043d\u0438\u0433\u0430', cx_story: '\u0417\u0430\u043f\u0438\u0441\u0438', cx_foes: '\u041c\u0430\u0448\u0438\u043d\u044b', cx_mods: '\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438',
@@ -1762,63 +1841,68 @@ const I18N = {
     up_greed_t: 'Гнать в три смены',
 
     bellRung: 'УДАРИЛИ В КОЛОКОЛ', rallyUp: 'ВСЕ НА СТЕНУ!',
-    ab_bell: 'Колокол', ab_bellS: 'бьёт по всем машинам, сбивает наводку',
+    shellKnocked: 'СНАРЯД ОТБИТ!', deflected: 'ОТБИТ!',
+    ab_bell: 'Колокол', ab_bellS: 'отбивает снаряды, бьёт по всем машинам',
     ab_rally: 'Подмога', ab_rallyS: 'всё стреляет вдвое быстрее',
     ab_mend: 'Латать стену', ab_mendS: 'залатать все постройки разом',
     ab_ready: 'готово', ab_nothing: 'латать нечего',
     wearNote: 'постройки изнашиваются, пока на поле идёт волна',
 
-    tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u0435', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
-    tut_slow: 'Замедлено, пока читаешь',
+    tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
+    tut_slow: 'Замедлено, пока читаешь', tut_slow_s: 'Замедл.',
+    cl_front: 'Первый ряд', cl_full: 'Целый ряд', cl_line: 'Черта нагрузки', cl_rift: 'Разлом', cl_shell: 'Снаряд!',
     tut_safe: 'ОБУЧЕНИЕ: СЕРДЦЕ НЕ ПОГАСНЕТ',
     tut_done_t: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0439\u0434\u0435\u043d\u043e',
-    tut_done_d: '\u042d\u0442\u043e \u0432\u0435\u0441\u044c \u0434\u0432\u043e\u0440. \u0414\u0430\u043b\u044c\u0448\u0435 \u043f\u043e-\u043d\u0430\u0441\u0442\u043e\u044f\u0449\u0435\u043c\u0443: \u0432\u043e\u043b\u043d\u044b \u0440\u0430\u0441\u0442\u0443\u0442, \u0438\u0437-\u0437\u0430 \u043a\u0440\u044f\u0436\u0430 \u0432\u044b\u0445\u043e\u0434\u044f\u0442 \u043d\u043e\u0432\u044b\u0435 \u043c\u0430\u0448\u0438\u043d\u044b, \u0438 \u043d\u0438\u043a\u0442\u043e \u0442\u0435\u0431\u044f \u043d\u0435 \u0436\u0434\u0451\u0442. \u0423\u0434\u0430\u0447\u0438, \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c.',
+    tut_done_d: 'Это всё. Дальше волны только больше. Удачи!',
     tut_skipped: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e, \u0443\u0434\u0430\u0447\u0438',
 
-    tu1_t: '\u042d\u0442\u043e \u0421\u0435\u0440\u0434\u0446\u0435',
-    tu1_d: '\u0420\u043e\u0434\u043d\u0438\u043a \u0441\u043b\u0435\u0432\u0430: \u0421\u0435\u0440\u0434\u0446\u0435 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u044f. \u0412\u0441\u044f \u0438\u0433\u0440\u0430 \u043e \u0442\u043e\u043c, \u0447\u0442\u043e\u0431\u044b \u043e\u043d\u043e \u043d\u0435 \u043f\u043e\u0433\u0430\u0441\u043b\u043e. \u0415\u0433\u043e \u043f\u043e\u043b\u043e\u0441\u0430 \u0434\u043e\u0439\u0434\u0451\u0442 \u0434\u043e \u043d\u0443\u043b\u044f, \u0437\u0430\u0431\u0435\u0433 \u043e\u043a\u043e\u043d\u0447\u0435\u043d.',
-    tu2_t: '\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0447\u0442\u043e-\u043d\u0438\u0431\u0443\u0434\u044c',
-    tu2_d: '\u041d\u0430\u0436\u043c\u0438 <b>\u041f\u0420\u041e\u0411\u0415\u041b</b> \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
-    tu2_d_touch: '\u0416\u043c\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
-    tu3_t: '\u041d\u0430\u0432\u0435\u0434\u0438',
-    tu3_d: 'Зажми <b>левую кнопку мыши</b> и веди секцию вдоль линии, или жми <b>A</b> / <b>D</b>. <b>W</b> повернёт. Пунктирный круг: насколько далеко эта постройка достаёт.',
-    tu3_d_touch: 'Веди пальцем по полю, и секция идёт за ним. <b>Тап по полю</b> повернёт её. Пунктирный круг: насколько далеко эта постройка достаёт.',
-    tu_store_t: 'Отложи про запас',
-    tu_store_d: 'Секция в руках не всегда та, которой не хватает стене. <b>C</b> уберёт её в запас и выдаст следующую. Нажми ещё раз, и они поменяются местами.',
-    tu_store_d_touch: '<b>Свайп вверх</b> по полю или кнопка <b>Запас</b>, и секция уходит на потом. Ещё раз, и отложенная вернётся в руки.',
-    tu4_t: '\u041f\u043e\u0441\u0442\u0430\u0432\u044c',
-    tu4_d: 'Снова <b>ПРОБЕЛ</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
-    tu4_d_touch: '<b>Свайп вниз</b> по полю или кнопка <b>Бросок</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
-    tu5_t: '\u0421\u043e\u0431\u0435\u0440\u0438 \u0441\u0442\u0435\u043d\u0443',
-    tu5_d: '\u0421\u0442\u0440\u043e\u0439 \u0434\u0430\u043b\u044c\u0448\u0435. \u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u0440\u0435\u043b\u044f\u044e\u0442, \u043d\u043e \u0438 \u0434\u0435\u0440\u0436\u0430\u0442 \u0448\u0430\u0433\u0430\u044e\u0449\u0438\u0445, \u043f\u043b\u043e\u0442\u043d\u044b\u0439 \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u044f\u0434 \u044d\u0442\u043e \u0431\u0440\u043e\u043d\u044f \u0438 \u043e\u0433\u043d\u0435\u0432\u0430\u044f \u043c\u043e\u0449\u044c \u0440\u0430\u0437\u043e\u043c. \u041f\u043e\u0441\u0442\u0430\u0432\u044c \u0435\u0449\u0451 \u0442\u0440\u0438.',
-    tu6_t: '\u0421\u043e\u043c\u043a\u043d\u0438 \u0440\u044f\u0434',
-    tu6_d: 'Забей ряд во все десять колонок, и он сомкнётся: ударная волна валит все машины на поле. Ряд на это и тратится, эти постройки исчезают, а стена оседает вниз. Смыкай тот ряд, который не жалко.',
-    tu_salvage_t: 'Что остаётся от ряда',
-    tu_salvage_d: 'Сомкнутый ряд разом платит припасом и насовсем даёт <b>лом</b>. Лом поднимает прочность и урон всем постройкам, и тем, что уже стоят, и тем, что поставишь после. Это единственное здешнее число, которое не падает.',
-    tu7_t: '\u0421\u043b\u0435\u0434\u0438 \u0437\u0430 \u0447\u0435\u0440\u0442\u043e\u0439 \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0438',
-    tu7_d: '\u041f\u0443\u043d\u043a\u0442\u0438\u0440\u043d\u0430\u044f \u043a\u0440\u0430\u0441\u043d\u0430\u044f \u043b\u0438\u043d\u0438\u044f: \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0435\u043c\u043b\u044f. \u0412\u0441\u0451, \u0447\u0442\u043e \u0432\u044b\u0448\u0435, \u0442\u0440\u0435\u0441\u043a\u0430\u0435\u0442\u0441\u044f \u0438 \u043e\u0431\u0432\u0430\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0441\u0430\u043c\u043e. \u0421\u0442\u0440\u043e\u0439 \u0432\u0448\u0438\u0440\u044c, \u0430 \u043d\u0435 \u0432\u0432\u044b\u0441\u044c.',
+    tu1_t: 'Это Сердце',
+    tu1_d: 'Береги его. Кончится вода: игра окончена.',
+    tu2_t: 'Строй',
+    tu2_d: '<b>ПРОБЕЛ</b> или <b>Строить</b>: получить секцию.',
+    tu2_d_touch: 'Жми <b>Строить</b>, чтобы получить секцию.',
+    tu3_t: 'Наведи',
+    tu3_d: 'Двигай: <b>A</b>/<b>D</b> или мышью. Поворот: <b>W</b>. Круг: дальность.',
+    tu3_d_touch: '<b>Веди пальцем</b>, чтобы двигать, <b>тап</b>, чтобы повернуть. Круг: дальность.',
+    tu_store_t: 'Отложи',
+    tu_store_d: '<b>C</b> убирает секцию про запас.',
+    tu_store_d_touch: '<b>Свайп вверх</b> или <b>Запас</b>: отложить на потом.',
+    tu4_t: 'Поставь',
+    tu4_d: '<b>ПРОБЕЛ</b> ставит секцию. Стреляет она сама.',
+    tu4_d_touch: '<b>Свайп вниз</b> или <b>Бросок</b>. Стреляет она сама.',
+    tu5_t: 'Собери стену',
+    tu5_d: 'Постройки держат машины и стреляют. Поставь ещё <b>3</b>.',
+    tu6_t: 'Сомкни ряд',
+    tu6_d: 'Заполни все <b>10 колонок</b>: взрыв ударит по всем машинам. Ряд исчезнет.',
+    tu_salvage_t: 'Лом',
+    tu_salvage_d: 'За каждый ряд дают <b>лом</b>: все постройки навсегда сильнее.',
+    tu7_t: 'Черта нагрузки',
+    tu7_d: 'Всё выше <b>красной черты</b> рушится. Строй вширь, а не ввысь.',
     tu8_t: 'Почини Сердце',
-    tu8_d: 'Что-то прорвалось, и Сердце просело. Жми <b>R</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
-    tu8_d_touch: 'Что-то прорвалось, и Сердце просело. Жми <b>Лечить</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
-    tu_call_t: 'Позови раньше',
-    tu_call_d: 'Полоса над полем отсчитывает время до следующей волны. <b>ENTER</b> вызовет её раньше срока, и чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
-    tu_call_d_touch: 'Полоса над полем отсчитывает время до следующей волны. <b>Тапни по полосе</b>, и волна придёт раньше срока: чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
-    tu9_t: '\u0412\u043e\u0442 \u0438 \u043e\u043d\u0438',
-    tu9_d: 'Постройки сами наводятся и сами стреляют. Стена на тебе: строй дальше и держи её сомкнутой.',
-    tu_bell_t: 'Колокол',
-    tu_bell_d: '<b>Колокол</b> бьёт разом по всем машинам на поле, отталкивает их на шаг и сбивает наводку. Припаса не стоит, возвращается 24 секунды. Ударь в него.',
+    tu8_d: '<b>R</b> лечит его за припасы.',
+    tu8_d_touch: '<b>Лечить</b>: лечение за припасы.',
+    tu_call_t: 'Зови волну',
+    tu_call_d: '<b>ENTER</b> начинает волну раньше. Раньше: больше награда.',
+    tu_call_d_touch: 'Тапни <b>полосу</b>, чтобы начать раньше. Раньше: больше награда.',
+    tu9_t: 'Вот и они',
+    tu9_d: 'Машины выходят из <b>Разлома</b>. Постройки стреляют сами.',
+    tu_bell_t: 'Снаряд летит!',
+    tu_bell_d: 'Бей в <b>Колокол</b> (<b>Q</b>): он отбивает снаряды на лету.',
+    tu_bell_d_touch: 'Жми <b>Колокол</b>: он отбивает снаряды на лету.',
     tu_rally_t: 'Подмога',
-    tu_rally_d: '<b>Подмога</b> заставляет всех крутить вороты вдвое быстрее на несколько секунд. Тоже бесплатно, возвращается тридцать секунд. Береги её на тот момент, когда первый ряд вот-вот проломят.',
+    tu_rally_d: '<b>E</b>: 6 секунд все стреляют вдвое быстрее.',
+    tu_rally_d_touch: '<b>Подмога</b>: 6 секунд все стреляют вдвое быстрее.',
     tu_mend_t: 'Латай стену',
-    tu_mend_d: 'Постройки изнашиваются, пока об них бьётся волна. <b>Латать стену</b> чинит их все разом за припас, и цена идёт за тем, сколько повреждений надо свести.',
-    tu_held_t: 'Держи',
-    tu_held_d: 'Держи стену сомкнутой, пока не упадёт последняя машина.',
-    tu_upkeep_t: 'Стена выставляет счёт',
-    tu_upkeep_d: 'Каждая отбитая волна кончается <b>содержанием</b>. Стена берёт с тебя припас просто за то, что стоит, и берёт тем больше, чем дальше ты зашёл. Не хватит припаса, и разницу постройки вычтут из собственной прочности.',
-    tu_hoard_t: 'Копить тоже дорого',
-    tu_hoard_d: 'Счёт это большее из двух чисел: во что обходится твоя стена и четверть припаса, который лежит без дела. Полный кошель облагают как длинную стену, так что вкладывай его в постройки, а не береги на потом.',
-    tu_cards_t: 'Выбери одну',
-    tu_cards_d: 'Отбитая волна кончается тремя карточками, и одну ты берёшь. Каждая показывает, что сделает именно с твоими числами, ещё до того как ты согласишься, так что читай строку внизу. Некоторые просят что-то взамен.',
+    tu_mend_d: '<b>F</b> чинит все постройки разом за припасы.',
+    tu_mend_d_touch: '<b>Латать стену</b> чинит все постройки разом за припасы.',
+    tu_held_t: 'Держись',
+    tu_held_d: 'Держи стену, пока не упадёт последняя машина.',
+    tu_upkeep_t: 'Содержание',
+    tu_upkeep_d: 'После волны стена берёт припасы: <b>содержание</b>. Не хватит: теряет прочность.',
+    tu_hoard_t: 'Трать припасы',
+    tu_hoard_d: 'Накопленное тоже облагают. Лучше строй.',
+    tu_cards_t: 'Выбери карту',
+    tu_cards_d: 'После волны бери <b>1 из 3</b> улучшений. Красное: цена.',
     /* ---- онлайн: аккаунты, комнаты и гонка на два поля ---- */
     m_online: 'Матч', m_onlineSub: 'Один сид, два поля, одна длинная ночь',
     on_title: 'Матч',
@@ -1947,6 +2031,18 @@ const CFG = {
   /* how far the camera may pull back; the framing rule below keeps the load
      line in view, so this only bites on very small windows */
   minZoom: 0.5,
+  /* How close it may come. The whole field is always in frame: the Heart and
+     the farmer, all ten columns up to the load line and a row over it, the
+     run-up and the Rift. Leaning in close made the blocks big and the fight
+     unreadable, since you could no longer see the wall and the machines at
+     once. On a window wider than the field needs, the field sits in the
+     middle and the backdrop fills the sides: the town on the left, the
+     harvested ground on the right. */
+  maxZoom: 1.25,
+  viewHeadroom: 1.5,     // rows framed above the load line or the stack
+  viewPadL: 34,          // world units left of the Heart: where the farmer stands
+  /* training: how far the camera may lean in on the thing a card is about */
+  coachMaxZoom: 2.2,
 
   /* --- tetris feel: slower, forgiving, tap-accurate --- */
   fallInterval: 0.95,
@@ -2206,6 +2302,7 @@ let CW = 800, CH = 480, DPR = 1;
 function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
   const stage = document.getElementById('stage');
+  placeCoach(stage);
   /* Measure where the field actually starts and give it the rest of the
      window. The old floor of 340px was taller than what was left on a 320x568
      phone or a short desktop window, so the field began below the fold and the
@@ -2240,6 +2337,50 @@ function resize() {
   sizeCanvas(canvas, h);
   if (ghostCanvas && !ghostCanvas.parentElement.hidden) sizeCanvas(ghostCanvas, h);
   CW = canvas.parentElement.clientWidth;
+}
+/* The coach card floats in the field's empty top-right sky when there is room
+   for it (a desktop or tablet), and drops to a row under the field when there
+   is not (a phone, a short window). Floating costs the field no height; the
+   row costs a little but never covers the yard on a field too narrow to have
+   an empty corner. Moving it is idempotent, so the ResizeObserver this sets
+   off lands on a no-op. */
+const COACH_FLOAT_MIN_W = 720, COACH_FLOAT_MIN_H = 520;
+function placeCoach(stage) {
+  const tut = document.getElementById('tut');
+  if (!tut || !stage) return;
+  const float = stage.clientWidth >= COACH_FLOAT_MIN_W && window.innerHeight >= COACH_FLOAT_MIN_H;
+  if (tut.classList.contains('float') !== float) tut.classList.toggle('float', float);
+  if (float && tut.parentElement !== stage) stage.appendChild(tut);
+  else if (!float && tut.parentElement === stage) stage.after(tut);
+}
+/* Where the floating coach starts, in canvas pixels, or null when it is not
+   floating. The banner uses it to step out of the card's way. */
+function coachFloatLeft() {
+  const tut = document.getElementById('tut');
+  if (!tut || tut.hidden || !tut.classList.contains('float')) return null;
+  const cr = canvas.getBoundingClientRect(), tr = tut.getBoundingClientRect();
+  if (tr.top - cr.top > CH * 0.45) return null;      // not up where the banner is
+  return tr.left - cr.left;
+}
+/* The part of the field the training camera may frame things in, in canvas
+   pixels: below the piece strip, and clear of the floating card. The card sits
+   top right, so the bigger of "left of it" and "under it" wins. */
+let coachAreaMemo = null, coachAreaAt = -1;
+function coachFreeArea() {
+  // asked several times a frame; the card only moves on layout, so measure once
+  const now = performance.now();
+  if (coachAreaMemo && now - coachAreaAt < 8) return coachAreaMemo;
+  coachAreaAt = now;
+  const a = coachAreaMemo = { l: 10, t: 80, r: CW - 10, b: CH - 10 };
+  const tut = document.getElementById('tut');
+  if (tut && !tut.hidden && tut.classList.contains('float')) {
+    const cr = canvas.getBoundingClientRect(), tr = tut.getBoundingClientRect();
+    const left = tr.left - cr.left - 16, under = tr.bottom - cr.top + 14;
+    const byLeft = Math.max(0, left - a.l) * (a.b - a.t);
+    const byUnder = (a.r - a.l) * Math.max(0, a.b - Math.max(a.t, under));
+    if (byLeft >= byUnder) a.r = Math.min(a.r, left); else a.t = Math.max(a.t, under);
+  }
+  return a;
 }
 /* assigning canvas.width clears it, so only touch what actually changed */
 function sizeCanvas(cv, h) {
@@ -2313,6 +2454,12 @@ function limb(bx, by, fx, fy, lift, w) {
 const FD = 'Oswald, "Arial Narrow", Impact, sans-serif';
 const FM = '"JetBrains Mono", ui-monospace, Consolas, monospace';
 
+/* blend two #rrggbb colours; t = 0 gives a, t = 1 gives b */
+function mixHex(a, b, t) {
+  const p = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const x = p(a), y = p(b);
+  return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',') + ')';
+}
 function ellipse(x, y, rx, ry, rot) {
   ctx.beginPath();
   ctx.ellipse(x, y, Math.max(.4, rx), Math.max(.4, ry), rot || 0, 0, Math.PI * 2);
@@ -2400,6 +2547,8 @@ class Game {
     /* incoming siege shots, each with a column and a countdown */
     this.barrages = [];
     this.barrageTimer = 0;
+    this.deflects = [];      // shells the bell knocked away, still flying off
+    this.deflected = 0;
     this.hurtFlash = 0;
     this.placed = 0;
     this.rotations = 0;
@@ -2775,7 +2924,13 @@ class Game {
     const d = ENEMIES[type];
     const hp = CFG.enemyHp(this.wave) * d.hpMul;
     const ds = CFG.enemyDmgScale(this.wave);
-    const x = atX !== undefined ? atX : CFG.cols * CFG.cell + CFG.approach - 10 + STREAM.wave.range(0, 40);
+    /* A machine from the tear starts just BEHIND it, its front edge on the
+       tear line, and walks out: drawEnemies hides whatever is still on the far
+       side, so it steps through instead of swelling up out of thin air. The
+       draw from the wave stream stays one call, so both halves of a versus
+       match still roll the same numbers. */
+    const x = atX !== undefined ? atX
+      : CFG.cols * CFG.cell + CFG.approach + d.r * .95 + STREAM.wave.range(0, 14);
     const y = atY !== undefined ? atY : (d.flying ? STREAM.wave.range(2.6, 6.2) * CFG.cell : d.r);
     this.enemies.push({
       // the opponent's screen matches machines by id between packets; without
@@ -2788,6 +2943,9 @@ class Game {
       x, y,
       atkTimer: 0, slow: 0, burn: 0, burnDps: 0, pending: 0, flash: 0,
       spawnT: 0,   // 0 while it is still coming through the tear
+      // printed in the field by a carrier rather than walking out of the tear:
+      // those still grow in where they stand
+      split: atX !== undefined,
       healTimer: 0, phase: STREAM.local.range(0, 6.3),
       walk: STREAM.local.range(0, 6.3),   // stride phase — advanced by actual travel
       seen: false,
@@ -2799,7 +2957,8 @@ class Game {
     // a hive splitting mid-field is not the tear opening, so it gets no flash
     if (atX === undefined) {
       this.riftFlash = d.boss ? 1.5 : 1;
-      this.burst(x, y, '#aebbc8', d.boss ? 16 : 5);
+      // the sparks fly off the tear itself, not off the hidden machine behind it
+      this.burst(CFG.cols * CFG.cell + CFG.approach, y, '#aebbc8', d.boss ? 16 : 5);
     }
     if (!CODEX.seen[type]) { CODEX.unlock(type, this.wave); }
   }
@@ -2933,6 +3092,11 @@ class Game {
      at the wall. You get a marked column and a couple of seconds: ring the
      bell to scatter their aim, or accept the hole and rebuild. */
   updateBarrages(dt) {
+    for (let i = this.deflects.length - 1; i >= 0; i--) {
+      const d = this.deflects[i];
+      d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy -= 260 * dt; d.rot += dt * 14;
+      if (d.t > d.life) this.deflects.splice(i, 1);
+    }
     for (let i = this.barrages.length - 1; i >= 0; i--) {
       const b = this.barrages[i];
       if (b.dead) { this.barrages.splice(i, 1); continue; }
@@ -2975,11 +3139,21 @@ class Game {
     }
   }
 
+  /* Where a falling shell is on screen: it drops down its marked column over
+     the warning time, so the bell has something visible to hit. */
+  shellAt(b) {
+    const k = 1 - Math.max(0, b.t) / (b.warn || CFG.barrageWarn);
+    // it starts under the piece strip, not behind it, and lands on the stack
+    const y0 = 92, y1 = Math.max(y0 + 40, this.originY - 30);
+    return { k, x: this.sx(b.col * CFG.cell + CFG.cell / 2), y: y0 + k * (y1 - y0) };
+  }
+
   drawBarrages() {
+    this.drawDeflects();
     if (!this.barrages.length) return;
     for (const b of this.barrages) {
       const x = this.sx(b.col * CFG.cell), w = CFG.cell * this.scale;
-      const k = 1 - Math.max(0, b.t) / CFG.barrageWarn;
+      const k = 1 - Math.max(0, b.t) / (b.warn || CFG.barrageWarn);
       // a steady marker still says "this column", it just stops strobing
       const blink = calm ? .6 : .35 + Math.abs(Math.sin(this.time * (7 + k * 9))) * .45;
       ctx.fillStyle = 'rgba(191,68,51,' + (0.1 + k * 0.16) * blink + ')';
@@ -2987,14 +3161,58 @@ class Game {
       ctx.strokeStyle = 'rgba(191,68,51,' + blink + ')';
       ctx.lineWidth = 2;
       ctx.strokeRect(x + 1, 0, w - 2, this.originY);
-      // a chevron sliding down the column as the shell falls
-      const my = 14 + k * (this.originY - 40);
+      // a chevron sliding down the column under the shell as it falls
+      const my = this.shellAt(b).y + 12;
       ctx.fillStyle = 'rgba(191,68,51,' + (0.55 + blink * 0.45) + ')';
       ctx.beginPath();
       ctx.moveTo(x + w / 2, my + 11);
       ctx.lineTo(x + w / 2 - 8, my);
       ctx.lineTo(x + w / 2 + 8, my);
       ctx.closePath(); ctx.fill();
+      // the shell itself, riding the marker down: an iron ball with a lit fuse
+      const sh = this.shellAt(b);
+      this.drawShell(sh.x, sh.y, Math.max(6, 8.5 * this.scale * this.readK), 0, 1, true);
+    }
+  }
+
+  drawShell(x, y, r, rot, a, falling) {
+    ctx.save();
+    ctx.globalAlpha = a;
+    // a smoke streak above it while it drops (a batted shell has its own streak)
+    if (falling) {
+      ctx.strokeStyle = 'rgba(90,80,70,.28)'; ctx.lineWidth = r * .9; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y - r * 3.2); ctx.lineTo(x, y - r * .6); ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+    ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = '#3a3634';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(191,68,51,.9)'; ctx.lineWidth = Math.max(1.2, r * .18);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.beginPath(); ctx.arc(-r * .32, -r * .32, r * .3, 0, 6.3); ctx.fill();
+    // fuse and its spark
+    ctx.strokeStyle = '#7a5a35'; ctx.lineWidth = Math.max(1, r * .16);
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * .35, -r * 1.45); ctx.stroke();
+    const flick = calm ? 1 : .7 + Math.random() * .6;
+    ctx.fillStyle = 'rgba(255,190,70,.95)';
+    ctx.beginPath(); ctx.arc(r * .38, -r * 1.5, r * .26 * flick, 0, 6.3); ctx.fill();
+    ctx.restore();
+  }
+
+  /* Shells the bell knocked out of the air, spinning away back over the ridge. */
+  drawDeflects() {
+    for (const d of this.deflects) {
+      const a = Math.max(0, 1 - d.t / d.life);
+      const x = this.sx(d.x), y = this.sy(d.y);
+      // the streak it leaves on the way out
+      ctx.strokeStyle = 'rgba(255,214,120,' + (.55 * a).toFixed(3) + ')';
+      ctx.lineWidth = Math.max(2, d.r * .7); ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - d.vx * this.scale * .08, y + d.vy * this.scale * .08);
+      ctx.stroke(); ctx.lineCap = 'butt';
+      this.drawShell(x, y, d.r * (1 - .35 * d.t / d.life), d.rot, a);
     }
   }
 
@@ -3013,11 +3231,28 @@ class Game {
       e.x += 16;
       e.slow = Math.max(e.slow, 0.8); e.slowPow = 0.5;
     }
-    for (const b of this.barrages) b.dead = true;
+    /* Every shell in the air is batted away: it leaves as a visible shot back
+       towards the ridge, so the player sees what the bell just did. */
+    let knocked = 0;
+    for (const b of this.barrages) {
+      if (b.dead) continue;
+      b.dead = true;
+      knocked++;
+      const sh = this.shellAt(b);
+      const wx = b.col * CFG.cell + CFG.cell / 2;
+      const wy = Math.max(CFG.cell, (this.originY - sh.y) / this.scale);
+      // a flat arc back over the run-up towards the ridge it came from
+      this.deflects.push({ x: wx, y: wy, vx: 440 + STREAM.local.range(0, 80), vy: 170 + STREAM.local.range(0, 50),
+                           t: 0, life: 1.3, rot: 0, r: Math.max(6, 8.5 * this.scale * this.readK) });
+      this.burst(wx, wy, '#f0c050', 14);
+      this.floatText(wx, wy + 18, T('deflected'), '#cf8a24');
+    }
+    this.deflected += knocked;
+    if (knocked) SFX.deflect();
     this.emp = 0.45;
     this.shake = 16;
     SFX.bell();
-    this.setBanner(T('bellRung'), '#cf8a24');
+    this.setBanner(T(knocked ? 'shellKnocked' : 'bellRung'), '#cf8a24');
   }
 
   /* THE RALLY HORN. Everyone works the cranks twice as fast for a few seconds. */
@@ -3428,24 +3663,30 @@ class Game {
 
     this.drawBackdrop();
 
-    /* Always frame at least up to the load line plus a row: you have to be
-       able to see the space you are still allowed to build into, otherwise
-       planning the next piece is guesswork. */
+    /* The whole field at once: the load line always in view with a row to
+       spare over it (or over the stack and the piece, once they pass it), and
+       the full run-up to the Rift. You read the wall and the machines on it
+       in one look instead of panning your eyes across a close-up. */
     const top = Math.max(this.topRow() + 2, CFG.overheatRow + 1,
-                         this.piece ? this.piece.cy + 1 : 0);
-    const needH = (top + 3) * CFG.cell;
-    const worldW = CFG.coreW + CFG.cols * CFG.cell + CFG.approach + 20;
+                         this.piece ? this.piece.cy + 2 : 0);
+    const needH = (top + CFG.viewHeadroom) * CFG.cell;
+    const worldL = -CFG.coreW - CFG.viewPadL;
+    const worldR = CFG.cols * CFG.cell + CFG.approach + 40;
+    const worldW = worldR - worldL;
     /* Width always fits: the run-up has to be visible or the machines arrive
        from off-screen. Height is allowed to stop zooming out at minZoom, since
-       a tall tower is the player's own doing and the load line stays framed. */
-    const fitW = (CW - 20) / worldW;
+       a tall tower is the player's own doing. */
+    const fitW = (CW - 24) / worldW;
     const fitH = Math.max(CFG.minZoom, (CH - 74) / needH);
-    const target = Math.min(1.3, fitW, fitH);
+    const target = Math.min(CFG.maxZoom, fitW, fitH);
     if (!this.viewScale) this.viewScale = target;
     this.viewScale += (target - this.viewScale) * ease(dt, 4.5);
     this.scale = this.viewScale;
-    this.originX = 16 + CFG.coreW * this.scale;
+    // whatever width the field does not need is split evenly around it
+    const pad = Math.max(12, (CW - worldW * this.scale) / 2);
+    this.originX = pad - worldL * this.scale;
     this.originY = CH - 24;
+    this.applyCoachCamera(dt);
 
     /* Screen shake and the full-screen hit flash are the two effects people
        with motion sensitivity ask to lose first, and CSS cannot reach a canvas.
@@ -3458,6 +3699,7 @@ class Game {
     ctx.scale(this.scale, this.scale);
 
     this.drawGround();
+    this.drawFarmer();
     this.drawCore();
     this.drawGrid();
     this.drawPiece();
@@ -3488,58 +3730,318 @@ class Game {
     }
   }
 
-  /* A summer afternoon: sky, a hazy ridge in the west, then the meadow.
-     Everything here is static or slow — it must never pull the eye away from
-     the wall. The machines always come out of that ridge on the right. */
+  /* THE BACKDROP. Read from left to right it tells the whole game: the town
+     you are defending, its fields, the Heart and the wall in front of it, the
+     open run-up, and the dark ridge the machines walk out of.
+
+     It is painted to stay out of the way. Everything behind the field is pale
+     and low in contrast, pushed back by haze; the only strong shapes on screen
+     belong to the wall and the machines. The town and the fields hang off the
+     Heart's position and the ridge off the Rift's, so they stay where they
+     belong when the window is wide, narrow, or the training camera leans in. */
   drawBackdrop() {
     const horizon = this.originY !== undefined ? this.originY : CH - 24;
+    const heartX = this.sx ? this.sx(-CFG.coreW) : 60;
+    const riftX = this.sx ? this.sx(CFG.cols * CFG.cell + CFG.approach) : CW * .8;
+    const t = this.time || 0;
+    // one unit of backdrop size, from the size of the window rather than the
+    // zoom (far things do not grow when the camera leans in), and held down on
+    // a narrow phone field, where a full-size ridge swallowed the run-up
+    const u = Math.max(.5, Math.min(1.35, horizon / 430, CW / 1000));
 
+    // sky: deeper overhead, warm and pale at the horizon
     const sky = ctx.createLinearGradient(0, 0, 0, horizon);
-    sky.addColorStop(0, '#6fb4dc');
-    sky.addColorStop(.62, '#a9d8e9');
-    sky.addColorStop(1, '#dcecdc');
+    sky.addColorStop(0, '#7db7d8');
+    sky.addColorStop(.55, '#b6dbe8');
+    sky.addColorStop(1, '#e8efd8');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, CW, horizon + 2);
 
-    // sun, high and to the left, behind the settlement
-    ctx.fillStyle = 'rgba(255,250,220,.5)';
-    ctx.beginPath(); ctx.arc(CW * .14, horizon * .2, 52, 0, 6.3); ctx.fill();
-    ctx.fillStyle = 'rgba(255,252,232,.85)';
-    ctx.beginPath(); ctx.arc(CW * .14, horizon * .2, 21, 0, 6.3); ctx.fill();
+    // sun, high over the town
+    const sunX = Math.max(60, Math.min(CW * .3, heartX - 140 * u)), sunY = horizon * .2;
+    ctx.fillStyle = 'rgba(255,248,222,.45)';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 54 * u, 0, 6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,252,236,.9)';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 22 * u, 0, 6.3); ctx.fill();
 
     // slow clouds
-    ctx.fillStyle = 'rgba(255,255,255,.5)';
-    for (let i = 0; i < 3; i++) {
-      const cx = ((this.time * (5 + i * 2) + i * 420) % (CW + 300)) - 150;
-      const cy = horizon * (.16 + i * .13);
-      const r = 22 + i * 9;
-      ellipse(cx, cy, r * 1.9, r * .6); ctx.fill();
-      ellipse(cx + r * .7, cy - r * .26, r * 1.1, r * .5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.48)';
+    for (let i = 0; i < 4; i++) {
+      const cx = ((t * (4 + i * 1.7) + i * 390) % (CW + 320)) - 160;
+      const cy = horizon * (.12 + i * .1);
+      const r = (20 + i * 7) * u;
+      ellipse(cx, cy, r * 1.9, r * .55); ctx.fill();
+      ellipse(cx + r * .7, cy - r * .24, r * 1.05, r * .48); ctx.fill();
     }
 
-    // the western ridge the machines come over — hazy, far away, on the right
-    const ridgeY = horizon - 46;
-    ctx.fillStyle = 'rgba(126,150,140,.42)';
+    /* the ridge: the machines' side. Slate, jagged, and taller than anything
+       on the town's side, with the harvest's smoke leaning off it */
+    const rx0 = Math.max(riftX - 200 * u, Math.min(riftX - 60 * u, CW * .6));
+    const ridge = (x0, hMul, fill, step) => {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(x0, horizon);
+      for (let x = x0, i = 0; x <= CW + 60; x += step * u, i++) {
+        const peak = (i % 3 === 1 ? 100 : i % 3 === 2 ? 64 : 80) * hMul * u * (1 + .16 * Math.sin(i * 2.3 + x0));
+        ctx.lineTo(x + step * .5 * u, horizon - peak);
+        ctx.lineTo(x + step * u, horizon - peak * .52 - 8 * u);
+      }
+      ctx.lineTo(CW + 60, horizon); ctx.closePath(); ctx.fill();
+    };
+    ridge(rx0, 1, 'rgba(126,130,154,.36)', 36);
+    ridge(rx0 + 40 * u, .55, 'rgba(104,106,128,.3)', 26);   // the foothills, nearer and darker
+    // the harvest's smoke, a soft haze leaning off the ridge towards the east
+    const puff = (x, y, r, a) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(84,82,98,' + a.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(84,82,98,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    for (let p = 0; p < 2; p++) {
+      const sx0 = Math.min(CW - 30 * u, riftX + (70 + p * 120) * u);
+      for (let i = 0; i < 6; i++) {
+        const life = (t * .05 + i / 6 + p * .37) % 1;
+        puff(sx0 + life * 110 * u, horizon - (70 + life * 170) * u, (26 + life * 52) * u, .16 * Math.sin(Math.PI * life));
+      }
+    }
+
+    // far hills on the valley side, pale blue-green
+    ctx.fillStyle = 'rgba(160,196,160,.55)';
     ctx.beginPath();
-    ctx.moveTo(CW, horizon);
-    ctx.lineTo(CW, ridgeY - 16);
-    for (let x = CW; x >= CW * .34; x -= 46) {
-      ctx.lineTo(x - 23, ridgeY - 6 + Math.sin(x * .05) * 12);
-      ctx.lineTo(x - 46, ridgeY + 10 + Math.cos(x * .04) * 9);
-    }
-    ctx.lineTo(CW * .34, horizon);
-    ctx.closePath(); ctx.fill();
+    ctx.moveTo(-10, horizon);
+    for (let x = -10; x <= riftX; x += 24)
+      ctx.lineTo(x, horizon - (34 + Math.sin(x * .011 + 1.1) * 14 + Math.sin(x * .031) * 6) * u);
+    ctx.lineTo(riftX, horizon); ctx.closePath(); ctx.fill();
 
-    // far treeline and meadow haze
-    ctx.fillStyle = 'rgba(108,146,86,.38)';
+    this.drawTown(heartX, horizon, u);
+
+    // near meadow haze along the horizon, over the whole width
+    ctx.fillStyle = 'rgba(126,164,96,.34)';
     ctx.beginPath();
     ctx.moveTo(0, horizon);
     for (let x = 0; x <= CW; x += 30)
-      ctx.lineTo(x, horizon - 13 - Math.sin(x * .028 + 1.4) * 7);
+      ctx.lineTo(x, horizon - (9 + Math.sin(x * .028 + 1.4) * 4) * u);
     ctx.lineTo(CW, horizon); ctx.closePath(); ctx.fill();
 
     ctx.fillStyle = this.sector.tint;
     ctx.fillRect(0, 0, CW, CH);
+  }
+
+  /* THE TOWN the Heart keeps alive: a walled market town on a rise, its bell
+     tower (the same bell you ring), a mill on the far hill, smoke from the
+     chimneys, and fields running down to the wall. Drawn once per frame from a
+     fixed plan, right to left from the gate by the Heart. On a field too
+     narrow to leave room beside the Heart (a phone), it moves back and sits
+     small and faint on the horizon behind the yard instead. */
+  drawTown(heartX, horizon, u) {
+    const near = heartX > 150;
+    const k = near ? u : u * .62;
+    const R = near ? heartX - 12 * u : this.sx(CFG.cols * CFG.cell * .92);
+    if (R < 20) return;
+    const t = this.time || 0;
+    const X = x => R + x * k, Y = y => horizon - y * k;
+    // distance haze, mixed into every colour rather than laid over as a sheet,
+    // so the sky between the roofs stays sky
+    const hz = near ? .3 : .55;
+    const H = c => mixHex(c, '#e2ecea', hz);
+    ctx.save();
+
+    // the rise the town stands on, striped with fields down to the wall
+    ctx.fillStyle = H('#a9c485');
+    ctx.beginPath();
+    ctx.moveTo(X(40), horizon);
+    ctx.quadraticCurveTo(X(-150), Y(46), X(-420), Y(40));
+    ctx.quadraticCurveTo(X(-560), Y(36), X(-700), Y(22));
+    ctx.lineTo(X(-700), horizon); ctx.closePath(); ctx.fill();
+    const fields = ['#d8c078', '#b9cc7c', '#e1cd8a', '#a7c275', '#d4b86c'];
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = H(fields[i]);
+      ctx.beginPath();
+      const x0 = -40 - i * 118, x1 = x0 - 104;
+      ctx.moveTo(X(x0), Y(6 + i * 1.5)); ctx.lineTo(X(x1), Y(8 + i * 2));
+      ctx.lineTo(X(x1 - 6), Y(15 + i * 2)); ctx.lineTo(X(x0 - 4), Y(13 + i * 1.5));
+      ctx.closePath(); ctx.fill();
+    }
+
+    // the mill on the far hill, sails turning slowly
+    const mx = X(-600), my = Y(34);
+    ctx.fillStyle = H('#d9cdb0');
+    ctx.beginPath();
+    ctx.moveTo(mx - 10 * k, my); ctx.lineTo(mx - 6 * k, my - 46 * k);
+    ctx.lineTo(mx + 6 * k, my - 46 * k); ctx.lineTo(mx + 10 * k, my); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = H('#9d6f58');
+    ctx.beginPath();
+    ctx.moveTo(mx - 9 * k, my - 45 * k); ctx.lineTo(mx, my - 56 * k); ctx.lineTo(mx + 9 * k, my - 45 * k);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = H('#8a7a64'); ctx.lineWidth = Math.max(1, 2.2 * k);
+    const hub = [mx, my - 42 * k], spin = calm ? .5 : t * .7;
+    for (let i = 0; i < 4; i++) {
+      const a = spin + i * Math.PI / 2;
+      ctx.beginPath(); ctx.moveTo(hub[0], hub[1]);
+      ctx.lineTo(hub[0] + Math.cos(a) * 30 * k, hub[1] + Math.sin(a) * 30 * k); ctx.stroke();
+      ctx.fillStyle = 'rgba(236,228,210,.9)';
+      ctx.save(); ctx.translate(hub[0], hub[1]); ctx.rotate(a);
+      ctx.fillRect(10 * k, 0, 19 * k, 5.5 * k); ctx.restore();
+    }
+
+    // houses behind the wall: gables in weathered tile, whitewash and ochre
+    const houses = [
+      [-58, 30, 30, '#e9ddc2', '#b8694c'], [-96, 26, 38, '#dfcd9f', '#9d5c43'],
+      [-134, 38, 28, '#ece2c9', '#a9674b'], [-222, 34, 34, '#e3d3ab', '#b0735a'],
+      [-262, 28, 26, '#eadfc4', '#9a5a44'], [-306, 42, 36, '#dccb9e', '#ab6a4f'],
+      [-350, 30, 30, '#e8dcc0', '#a35f46'], [-392, 36, 27, '#e2d2aa', '#b36f55'],
+      [-436, 30, 33, '#ebe0c6', '#9c6049'], [-478, 34, 25, '#dfcfa4', '#aa6b50'],
+    ];
+    const base = 14;                       // the houses stand on the rise, above the wall
+    for (const [x, w, h, wall, roof] of houses) {
+      ctx.fillStyle = H(wall);
+      ctx.fillRect(X(x - w), Y(base + h), w * k, h * k);
+      ctx.fillStyle = H(roof);
+      ctx.beginPath();
+      ctx.moveTo(X(x - w - 3), Y(base + h)); ctx.lineTo(X(x - w / 2), Y(base + h + w * .55));
+      ctx.lineTo(X(x + 3), Y(base + h)); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(92,72,52,.55)';
+      const wy = base + h * .62;
+      ctx.fillRect(X(x - w * .72), Y(wy), 4.5 * k, 5.5 * k);
+      ctx.fillRect(X(x - w * .36), Y(wy), 4.5 * k, 5.5 * k);
+    }
+    // chimney smoke, rising and thinning
+    for (const [hx, hh] of [[-80, 38], [-290, 36], [-420, 33]]) {
+      for (let i = 0; i < 4; i++) {
+        const life = ((t * .18 + i / 4 + hx * .001) % 1 + 1) % 1;
+        const x = X(hx + life * 18), y = Y(base + hh + 14 + life * 46), r = (4 + life * 10) * k;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(250,248,244,' + (.55 * Math.sin(Math.PI * life)).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(250,248,244,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    }
+
+    // the bell tower: the bell you ring hangs in that open top
+    const bx = -176, bw = 26;
+    ctx.fillStyle = H('#d3cbb7');
+    ctx.fillRect(X(bx - bw), Y(base + 92), bw * k, 92 * k);
+    ctx.fillStyle = 'rgba(80,66,50,.6)';
+    ctx.fillRect(X(bx - bw * .72), Y(base + 84), bw * .44 * k, 13 * k);
+    ctx.fillStyle = H('#c99a3a');
+    ctx.beginPath(); ctx.arc(X(bx - bw / 2), Y(base + 76), 4.2 * k, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = H('#6f7c93');
+    ctx.beginPath();
+    ctx.moveTo(X(bx - bw - 3), Y(base + 92)); ctx.lineTo(X(bx - bw / 2), Y(base + 132));
+    ctx.lineTo(X(bx + 3), Y(base + 92)); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = H('#6f7c93'); ctx.lineWidth = Math.max(1, 1.5 * k);
+    ctx.beginPath(); ctx.moveTo(X(bx - bw / 2), Y(base + 132)); ctx.lineTo(X(bx - bw / 2), Y(base + 142)); ctx.stroke();
+
+    // round trees between the roofs
+    ctx.fillStyle = H('#86ad62');
+    for (const [x, r] of [[-150, 13], [-205, 11], [-330, 14], [-455, 12], [-520, 15]]) {
+      ctx.beginPath(); ctx.arc(X(x), Y(base + r * 1.6), r * k, 0, 6.3); ctx.fill();
+    }
+
+    // the town wall, crenellated, with the gate by the Heart
+    const wallL = -540;
+    ctx.fillStyle = H('#cfc5ad');
+    ctx.fillRect(X(wallL), Y(20), (-wallL) * k, 20 * k);
+    ctx.fillStyle = 'rgba(96,82,60,.28)';
+    ctx.fillRect(X(wallL), Y(20), (-wallL) * k, 3 * k);
+    ctx.fillStyle = H('#cfc5ad');
+    for (let x = wallL; x < -2; x += 12) ctx.fillRect(X(x), Y(26), 6 * k, 6 * k);
+    // gatehouse
+    ctx.fillStyle = H('#c7bca2');
+    ctx.fillRect(X(-40), Y(42), 38 * k, 42 * k);
+    for (let x = -40; x < -4; x += 10) ctx.fillRect(X(x), Y(48), 6 * k, 6 * k);
+    ctx.fillStyle = 'rgba(70,56,40,.55)';
+    ctx.beginPath();
+    ctx.moveTo(X(-30), horizon); ctx.lineTo(X(-30), Y(16));
+    ctx.arc(X(-21), Y(16), 9 * k, Math.PI, 0);
+    ctx.lineTo(X(-12), horizon); ctx.closePath(); ctx.fill();
+
+    ctx.restore();
+  }
+
+  /* THE TRAINING CAMERA. While a card is about something on the field, the
+     view leans in on it: the Heart fills the free part of the screen when the
+     card says "this is the Heart", the yard when the card is about building,
+     the tear when the machines first come through. It is a blend on top of
+     the ordinary framing above, so leaving a card eases straight back to it.
+
+     The blend moves the focus point on screen from wherever the normal view
+     has it to where the close-up wants it, while the scale travels
+     geometrically; a plain lerp of two origins swings the subject out of
+     frame halfway through. Input reads originX/scale like everything else, so
+     aiming stays exact while zoomed. */
+  applyCoachCamera(dt) {
+    const want = this.coachView();
+    this.camK = this.camK || 0;
+    this.camK += ((want ? 1 : 0) - this.camK) * ease(dt, 3.4);
+    if (want) {
+      if (!this.cam || this.camK < .03) this.cam = Object.assign({}, want);
+      else {
+        const e = ease(dt, 3.8), c = this.cam;
+        c.x += (want.x - c.x) * e; c.y += (want.y - c.y) * e;
+        c.px += (want.px - c.px) * e; c.py += (want.py - c.py) * e;
+        c.s = Math.exp(Math.log(c.s) + (Math.log(want.s) - Math.log(c.s)) * e);
+      }
+    }
+    if (!this.cam) return;
+    if (this.camK < .002 && !want) { this.cam = null; this.camK = 0; return; }
+    const k = this.camK * this.camK * (3 - 2 * this.camK);       // smoothstep
+    const c = this.cam, s0 = this.scale;
+    const bx = this.originX + c.x * s0, by = this.originY - c.y * s0;
+    const s1 = Math.exp(Math.log(s0) + (Math.log(c.s) - Math.log(s0)) * k);
+    const px = bx + (c.px - bx) * k, py = by + (c.py - by) * k;
+    this.scale = s1;
+    this.originX = px - c.x * s1;
+    this.originY = py + c.y * s1;
+  }
+
+  /* What the current card wants framed, as a world rectangle fitted into the
+     part of the field the card itself is not covering. Null when nothing. */
+  coachView() {
+    const t = this.tutorial;
+    if (!t || ui.tut.hidden || choiceOpen || storyOpen) return null;
+    const s = TUT_STEPS[t.step];
+    if (!s || !s.cam) return null;
+    // a live card leans in only while its reading window runs, then hands the
+    // player the whole field back for the fight
+    if (s.live && !(t.read > 0)) return null;
+    const cell = CFG.cell, boardW = CFG.cols * cell;
+    let l, r, b, tp;
+    if (s.cam === 'core') {
+      l = -CFG.coreW - 40; r = 44; b = -14; tp = CFG.coreH + 56;
+    } else if (s.cam === 'board') {
+      let hi = Math.max(this.topRow() + 1, 3);
+      if (this.piece) hi = Math.max(hi, this.visY + Math.max(...this.piece.cells.map(c => c[1])) + 1);
+      l = -CFG.coreW - 14; r = boardW + 26; b = -16; tp = (hi + 2.2) * cell;
+      // a row card hangs its signboard off the right end of the row: leave room
+      if (s.spot === 'row') r += 190;
+    } else if (s.cam === 'line') {
+      /* the line only means something measured against the ground and the
+         stack, so this one pulls back to take in both, with room on the
+         right for its signboard */
+      l = -CFG.coreW - 14; r = boardW + 210;
+      b = -16; tp = (CFG.overheatRow + 2.6) * cell;
+    } else if (s.cam === 'rift') {
+      const rx = boardW + CFG.approach;
+      l = rx - 230; r = rx + 90; b = -16; tp = 262;
+    } else return null;
+    const a = coachFreeArea();
+    const fw = Math.max(80, a.r - a.l), fh = Math.max(80, a.b - a.t);
+    let sc = Math.max(CFG.minZoom, Math.min(CFG.coachMaxZoom, fw / (r - l), fh / (tp - b)));
+    /* The Heart gets a real close-up once. The yard and the tear only lean in
+       a little: those cards are read while you build or watch, and a close-up
+       there hides the rest of the field. */
+    const base = this.viewScale || sc;
+    if (s.cam === 'board') sc = Math.min(sc, base * 1.35);
+    else if (s.cam === 'rift') sc = Math.min(sc, base * 1.6);
+    /* When the framed thing is shorter than the space, stand it on the bottom
+       of the frame rather than floating it in the middle: these are all
+       things on the ground, and a band of soil under them reads as a gap. */
+    const rectH = (tp - b) * sc;
+    const py = rectH < fh ? a.b - rectH / 2 : (a.t + a.b) / 2;
+    return { x: (l + r) / 2, y: (b + tp) / 2, s: sc, px: (a.l + a.r) / 2, py };
   }
 
   /* world → screen */
@@ -3549,22 +4051,51 @@ class Game {
 
   drawGround() {
     const w = CFG.cols * CFG.cell + CFG.approach;
-    const x0 = -CFG.coreW - 20;
+    /* The ground runs edge to edge of the canvas, however wide the window is.
+       It used to stop just past the tear, and on a wide screen everything to
+       the right of that was bare canvas. Past the tear it is the harvest's side
+       of the valley: the grass taken off square by square, bare soil left. */
+    const sc = this.scale || 1;
+    const xl = Math.floor(Math.min(-CFG.coreW - 20, -this.originX / sc - 12) / 7) * 7;
+    const xr = Math.max(w + 20, (CW - this.originX) / sc + 12);
+    const bare = w + 26;                     // where the harvested ground begins
+    const depth = Math.max(40, (CH - this.originY) / sc + 4);
 
     // turf: soil band under a lip of grass
     ctx.fillStyle = '#6f5233';
-    ctx.fillRect(x0, 0, w - x0 + 20, 40);
+    ctx.fillRect(xl, 0, xr - xl, depth);
     ctx.fillStyle = '#5f8a3c';
-    ctx.fillRect(x0, 0, w - x0 + 20, 7);
+    ctx.fillRect(xl, 0, bare - xl, 7);
     ctx.fillStyle = '#74a349';
-    ctx.fillRect(x0, 0, w - x0 + 20, 3.5);
+    ctx.fillRect(xl, 0, bare - xl, 3.5);
+
+    if (xr > bare) {
+      // the far side: soil gone grey, and the turf lifted in cell-sized squares
+      ctx.fillStyle = 'rgba(58,54,62,.22)';
+      ctx.fillRect(bare, 0, xr - bare, depth);
+      ctx.fillStyle = '#5d5448';
+      ctx.fillRect(bare, 0, xr - bare, 3);
+      for (let x = bare + 6; x < xr; x += 38) {
+        const n = (x * 13) % 7;
+        if (n < 4) {
+          ctx.fillStyle = 'rgba(36,30,26,.35)';
+          ctx.fillRect(x, 0, 14 + n * 3, 5 + (n % 2) * 2);
+        } else {
+          // a last square of turf the harvest has not reached yet
+          ctx.fillStyle = '#5f8a3c';
+          ctx.fillRect(x, -2, 12, 5);
+          ctx.fillStyle = '#74a349';
+          ctx.fillRect(x, -2, 12, 2);
+        }
+      }
+    }
 
     // blades along the lip — the settlement stands in real grass
     ctx.strokeStyle = 'rgba(96,140,62,.85)';
     ctx.lineWidth = 1.3;
     ctx.beginPath();
-    for (let x = x0; x < w + 20; x += 7) {
-      const h = 4 + ((x * 37) % 5);
+    for (let x = xl; x < bare; x += 7) {
+      const h = 4 + ((Math.abs(x) * 37) % 5);
       const lean = Math.sin(this.time * .8 + x * .09) * 1.8;
       ctx.moveTo(x, 0);
       ctx.lineTo(x + lean, -h);
@@ -3573,9 +4104,10 @@ class Game {
 
     // pebbles in the soil
     ctx.fillStyle = 'rgba(255,255,255,.09)';
-    for (let x = x0; x < w; x += 29) {
-      const yy = 12 + ((x * 13) % 22);
-      ctx.fillRect(x + ((x * 7) % 11), yy, 3, 2);
+    for (let x = xl; x < xr; x += 29) {
+      const ax = Math.abs(x);
+      const yy = 12 + ((ax * 13) % 22);
+      ctx.fillRect(x + ((ax * 7) % 11), yy, 3, 2);
     }
 
     const oy = -CFG.overheatRow * CFG.cell;
@@ -3598,6 +4130,71 @@ class Game {
       ctx.lineTo(x * CFG.cell, -t * CFG.cell);
       ctx.stroke();
     }
+  }
+
+  /* THE FARMER. Whoever is holding this valley together: straw hat, overalls,
+     a pitchfork, standing at the town gate beside the Heart and facing the
+     ridge. Idle most of the time, he flinches when the Heart takes a hit and
+     throws the fork up when the bell goes. World space, so he sits on the
+     turf and scales with everything else. */
+  drawFarmer() {
+    const fx = -CFG.coreW - 20;
+    const t = this.time || 0;
+    const breath = calm ? 0 : Math.sin(t * 2.1) * .5;
+    const flinch = this.hurtFlash > 0 && !calm ? Math.sin(t * 60) * 1.2 * this.hurtFlash : 0;
+    const cheer = Math.min(1, (this.emp || 0) * 3);
+    const x = fx + flinch;
+    ctx.save();
+    // shadow
+    ctx.fillStyle = 'rgba(40,30,20,.22)';
+    ellipse(x, 0, 12, 2.6); ctx.fill();
+    // boots and overall legs
+    ctx.fillStyle = '#5a3d26';
+    ctx.fillRect(x - 6.5, -4, 5.5, 4); ctx.fillRect(x + 1, -4, 5.5, 4);
+    ctx.fillStyle = '#3f6aa0';
+    ctx.fillRect(x - 6, -19, 5, 15.5); ctx.fillRect(x + 1, -19, 5, 15.5);
+    const by = breath;                         // the upper body rises and falls
+    // shirt, bib and straps
+    ctx.fillStyle = '#c4533c';
+    rr(x - 7.5, -34 + by, 15, 16, 3); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,40,28,.5)'; ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.moveTo(x - 7.5, -29 + by); ctx.lineTo(x + 7.5, -29 + by); ctx.stroke();
+    ctx.fillStyle = '#3f6aa0';
+    ctx.fillRect(x - 5, -27 + by, 10, 9);
+    ctx.fillRect(x - 5, -33 + by, 2, 6); ctx.fillRect(x + 3, -33 + by, 2, 6);
+    // the far arm, hanging
+    ctx.fillStyle = '#b44a35';
+    rr(x - 10, -32 + by, 3.6, 12, 1.6); ctx.fill();
+    ctx.fillStyle = '#e9b995';
+    ctx.beginPath(); ctx.arc(x - 8.2, -19.5 + by, 2, 0, 6.3); ctx.fill();
+    // the pitchfork, planted, or thrown up when the bell rings
+    const lift = cheer * 9;
+    const px = x + 12;
+    ctx.strokeStyle = '#8b5e34'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, 2 - lift); ctx.lineTo(px, -54 - lift); ctx.stroke();
+    ctx.strokeStyle = '#8e959c'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(px - 4, -54 - lift); ctx.lineTo(px + 4, -54 - lift);
+    for (const dx of [-4, 0, 4]) { ctx.moveTo(px + dx, -54 - lift); ctx.lineTo(px + dx, -62 - lift); }
+    ctx.stroke();
+    // the near arm, holding the fork
+    ctx.fillStyle = '#c4533c';
+    rr(x + 5, -31 + by - lift * .6, 7, 3.6, 1.6); ctx.fill();
+    ctx.fillStyle = '#e9b995';
+    ctx.beginPath(); ctx.arc(px, -29.5 + by - lift * .6, 2.1, 0, 6.3); ctx.fill();
+    // head, looking at the ridge
+    ctx.beginPath(); ctx.arc(x, -39.5 + by, 5.6, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#3a2a1c';
+    const blink = !calm && (t % 4.2) < .12;
+    ctx.fillRect(x + 2.4, -40.5 + by, 1.4, blink ? .4 : 1.6);
+    // straw hat
+    ctx.fillStyle = '#e2c066';
+    ellipse(x, -44 + by, 10.5, 2.3); ctx.fill();
+    ctx.fillStyle = '#d8b457';
+    rr(x - 5.5, -50.5 + by, 11, 7, 2.5); ctx.fill();
+    ctx.fillStyle = '#a8452f';
+    ctx.fillRect(x - 5.5, -45.8 + by, 11, 1.6);
+    ctx.restore();
   }
 
   /* THE HEART — a stone wellhead over the old spring. Its water level is
@@ -4261,14 +4858,27 @@ class Game {
   drawEnemies() {
     const k = this.readK;
     const groundY = this.sy(0);
+    // the tear line, in screen space; nothing is drawn on its far side
+    const tearX = this.sx(CFG.cols * CFG.cell + CFG.approach);
 
     for (const e of this.enemies) {
       const d = e.def;
       const x = this.sx(e.x), y = this.sy(e.y);
       const em = e.spawnT === undefined ? 1 : e.spawnT;
-      const r = d.r * this.scale * k * (.55 + .45 * em);
+      /* Only a carrier's printlings grow in where they stand. Everything else
+         is full size from the first frame and is revealed by the tear instead:
+         the part still on the far side is clipped away, so it walks out. */
+      const r = d.r * this.scale * k * (e.split ? .55 + .45 * em : 1);
       const hit = e.flash > 0;
-      if (em < 1) ctx.globalAlpha = em;
+      if (e.split && em < 1) ctx.globalAlpha = em;
+      // the aura is the widest thing drawn, so it decides when clipping ends
+      const crossing = !e.split && x + r * 1.8 > tearX;
+      if (crossing) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-40, -40, Math.max(0, tearX + 40), CH + 80);
+        ctx.clip();
+      }
 
       // healer link lines, drawn under everyone
       if (d.heals) {
@@ -4334,6 +4944,24 @@ class Game {
         }
       }
       ctx.globalAlpha = 1;
+      if (crossing) {
+        ctx.restore();
+        /* the seam where the body meets the tear: a cold rim of light down the
+           cut, brightest while most of the machine is still on the far side */
+        const inside = Math.min(1, Math.max(0, (x + r - tearX) / (2 * r)));
+        if (inside > 0) {
+          const hgt = r * (d.flying ? 1.3 : 1.45);
+          const a = .35 + inside * .55;
+          ctx.fillStyle = 'rgba(142,159,216,' + (a * .45).toFixed(3) + ')';
+          ellipse(tearX, y, Math.max(3, r * .28), hgt); ctx.fill();
+          ctx.strokeStyle = 'rgba(238,246,255,' + a.toFixed(3) + ')';
+          ctx.lineWidth = Math.max(1.5, r * .12);
+          ctx.beginPath();
+          ctx.moveTo(tearX, y - hgt);
+          ctx.quadraticCurveTo(tearX + r * .18 * Math.sin(this.time * 9 + e.phase), y, tearX, y + hgt);
+          ctx.stroke();
+        }
+      }
     }
   }
 
@@ -4448,32 +5076,127 @@ class Game {
   /* WHERE THE COACH IS POINTING. The card names a target and this draws the
      light on it, so "the spring on the left is the Heart" stops being a
      sentence the player has to solve. Buttons and stats are lit in CSS; these
-     four live on the canvas and move with the camera. */
+     live on the canvas and move with the camera.
+
+     A ring alone only changed a colour on something the player still had to
+     find, so every spot also carries its name on a signboard in large type,
+     next to the thing itself, popping in when the card opens. */
   drawCoachSpot() {
+    this.coachLabelBox = null;
     const t = this.tutorial;
     if (!t || ui.tut.hidden) return;
     const s = TUT_STEPS[t.step];
     if (!s || !s.spot) return;
-    const cell = CFG.cell;
+    const cell = CFG.cell, boardW = CFG.cols * cell;
+    let lab = null;
 
     if (s.spot === 'core') {
-      this.coachRing(this.sx(-CFG.coreW / 2), this.sy(CFG.coreH * .55),
-                     Math.max(CFG.coreW, CFG.coreH) * .58 * this.scale + 12);
+      const x = this.sx(-CFG.coreW / 2), y = this.sy(CFG.coreH * .55);
+      const r = Math.max(CFG.coreW, CFG.coreH) * .58 * this.scale + 12;
+      this.coachRing(x, y, r);
+      lab = { x, y, r, side: 'above' };
     } else if (s.spot === 'rift') {
-      this.coachRing(this.sx(CFG.cols * cell + CFG.approach - 10), this.sy(cell * 1.1), 46);
+      // ring the whole tear, not a spot at its foot
+      const x = this.sx(boardW + CFG.approach), y = this.sy(115);
+      const ry = 115 * this.scale + 16, rx = Math.max(34, ry * .42);
+      this.coachRing(x, y, rx, ry);
+      lab = { x, y, r: ry, side: 'above' };
     } else if (s.spot === 'piece' && this.piece) {
       const p = this.piece;
       let sum = 0, sumY = 0;
       for (const [cx, cy] of p.cells) { sum += cx; sumY += cy; }
       const n = p.cells.length;
-      this.coachRing(this.sx((p.cx + sum / n + .5) * cell),
-                     this.sy((this.visY + sumY / n + .5) * cell), cell * 1.5 * this.scale + 10);
+      const x = this.sx((p.cx + sum / n + .5) * cell), y = this.sy((this.visY + sumY / n + .5) * cell);
+      const r = cell * 1.5 * this.scale + 10;
+      this.coachRing(x, y, r);
+      lab = { x, y, r, side: 'above' };
     } else if (s.spot === 'row') {
-      this.coachBox(this.sx(0), this.sy(cell), CFG.cols * cell * this.scale, cell * this.scale);
+      this.coachBox(this.sx(0), this.sy(cell), boardW * this.scale, cell * this.scale);
+      lab = { x: this.sx(boardW) + 16, y: this.sy(cell / 2), r: 0, side: 'right' };
     } else if (s.spot === 'line') {
       const y = this.sy(CFG.overheatRow * cell);
-      this.coachBox(this.sx(0), y - 9, CFG.cols * cell * this.scale, 18);
+      this.coachBox(this.sx(0), y - 9, boardW * this.scale, 18);
+      lab = { x: this.sx(boardW) + 16, y, r: 0, side: 'right', ax: this.sx(boardW / 2) };
+    } else if (s.spot === 'shell') {
+      const b = this.barrages.find(x => !x.dead);
+      if (b) {
+        const sh = this.shellAt(b);
+        const r = Math.max(6, 8.5 * this.scale * this.readK) * 2.2 + 8;
+        this.coachRing(sh.x, sh.y, r);
+        lab = { x: sh.x + r + 14, y: sh.y, r: 0, side: 'right', ax: sh.x, pt: true };
+      }
+    } else if (s.spot === 'store' && this.holdBox) {
+      const b = this.holdBox;
+      this.coachBox(b.x, b.y, b.w, b.h);
+      lab = { x: b.x + b.w / 2, y: b.y + b.h / 2, r: b.h / 2 + 6, side: 'below' };
     }
+    if (!lab || !s.label && s.spot !== 'store') return;
+    const name = s.spot === 'store' ? T('hold_touch')
+      : s.label === 'piece' ? (this.piece ? turretName(TURRETS[this.piece.type]) : '')
+      : s.label === 'core' ? T('core') : T('cl_' + s.label);
+    if (name) this.coachLabel(name, lab);
+  }
+
+  /* The signboard: the target's name in display type big enough to read from
+     across the room, on a parchment plate with a notch pointing at the thing.
+     It pops in over a third of a second when the card opens and never covers
+     the card itself. */
+  coachLabel(text, at) {
+    const t = this.tutorial;
+    const p = Math.min(1, (t && t.since || 0) / .38);
+    const back = 1 + 2.70158 * Math.pow(p - 1, 3) + 1.70158 * Math.pow(p - 1, 2);
+    const pop = calm ? 1 : .35 + .65 * back;
+    // big, but not bigger than a narrow phone field can carry
+    const fs = Math.round(Math.max(20, Math.min(38, CH * .068, CW * .06)));
+    ctx.save();
+    ctx.font = '600 ' + fs + 'px ' + FD;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    const txt = String(text).toUpperCase();
+    const w = ctx.measureText(txt).width + 34, h = fs + 18;
+    const free = coachFreeArea();
+    let cx = at.x, cy, notch = 'down';
+    const roomR = at.x + w <= Math.min(CW - 8, free.r);
+    // the mirror spot on the other side of the target, for a sign that hangs off a point
+    const leftX = at.ax !== undefined && at.r === 0 && at.ax !== at.x ? at.ax - (at.x - at.ax) - w / 2 : null;
+    if (at.side === 'right' && !roomR && leftX !== null && leftX - w / 2 >= 8 && at.pt) {
+      cx = leftX; cy = at.y; notch = 'right';
+    } else if (at.side === 'right' && !roomR && at.ax !== undefined) {
+      // no room beside it on a narrow field: stand over the middle of it instead
+      cx = at.ax; cy = at.y - h / 2 - 16; notch = 'down';
+    } else if (at.side === 'right') { cx = at.x + w / 2; cy = at.y; notch = 'left'; }
+    else if (at.side === 'below') { cy = at.y + at.r + h / 2 + 12; notch = 'up'; }
+    else {
+      cy = at.y - at.r - h / 2 - 12;
+      if (cy - h / 2 < 6) { cy = at.y + at.r + h / 2 + 12; notch = 'up'; }
+      if (cy + h / 2 > CH - 6) { cx = at.x + at.r + w / 2 + 14; cy = at.y; notch = 'left'; }
+    }
+    const minX = w / 2 + 8, maxX = Math.max(minX, Math.min(CW - 8, free.r) - w / 2);
+    const shifted = Math.max(minX, Math.min(maxX, cx));
+    if ((notch === 'left' || notch === 'right') && shifted !== cx) notch = 'none';
+    cx = shifted;
+    cy = Math.max(h / 2 + 6, Math.min(CH - h / 2 - 6, cy));
+    if (!calm) cy += Math.sin(this.time * 2.6) * 2.2;
+
+    this.coachLabelBox = { l: cx - w / 2 - 12, r: cx + w / 2 + 12, t: cy - h / 2 - 12, b: cy + h / 2 + 12 };
+    ctx.translate(cx, cy);
+    ctx.scale(pop, pop);
+    ctx.globalAlpha = Math.min(1, p * 2.5);
+    ctx.beginPath();
+    rr(-w / 2, -h / 2, w, h, 10);
+    ctx.fillStyle = 'rgba(255,250,236,.97)'; ctx.fill();
+    ctx.lineWidth = 2.6; ctx.strokeStyle = 'rgba(47,100,64,.95)'; ctx.stroke();
+    // the notch, pointing at the target
+    ctx.fillStyle = 'rgba(47,100,64,.95)';
+    ctx.beginPath();
+    if (notch === 'down') { ctx.moveTo(-9, h / 2 - 1); ctx.lineTo(9, h / 2 - 1); ctx.lineTo(0, h / 2 + 10); }
+    else if (notch === 'up') { ctx.moveTo(-9, -h / 2 + 1); ctx.lineTo(9, -h / 2 + 1); ctx.lineTo(0, -h / 2 - 10); }
+    else if (notch === 'left') { ctx.moveTo(-w / 2 + 1, -9); ctx.lineTo(-w / 2 + 1, 9); ctx.lineTo(-w / 2 - 10, 0); }
+    else if (notch === 'right') { ctx.moveTo(w / 2 - 1, -9); ctx.lineTo(w / 2 - 1, 9); ctx.lineTo(w / 2 + 10, 0); }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#2f6440';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, 0, 1);
+    ctx.restore();
   }
 
   /* One dashed ice-green outline, breathing, in two weights so it reads over
@@ -4492,10 +5215,11 @@ class Game {
     draw(pulse);
     ctx.restore();
   }
-  coachRing(x, y, r) {
+  coachRing(x, y, r, ry) {
     this.coachStroke(pulse => {
       ctx.beginPath();
-      ctx.arc(x, y, r + pulse * 4, 0, 6.3);
+      if (ry) ctx.ellipse(x, y, r + pulse * 4, ry + pulse * 4, 0, 0, 6.3);
+      else ctx.arc(x, y, r + pulse * 4, 0, 6.3);
       ctx.stroke();
     });
   }
@@ -4511,7 +5235,9 @@ class Game {
     const BW = 48, BH = 38, GAP = 6;
     const stripW = BW * 4 + GAP * 3 + 14;
     const fieldC = this.originX + CFG.cols * CFG.cell * this.scale / 2;
-    const x0 = Math.round(Math.min(Math.max(fieldC - stripW / 2, 8), CW - stripW - 8));
+    // while the training card floats top right, the strip keeps out from under it
+    const stripR = this.tutorial ? Math.min(CW, coachFreeArea().r + 10) : CW;
+    const x0 = Math.round(Math.min(Math.max(fieldC - stripW / 2, 8), stripR - stripW - 8));
     const y0 = 18;
 
     const box = (x, y, type, size, dim) => {
@@ -4536,6 +5262,7 @@ class Game {
     ctx.fillStyle = '#7d6b53';
     ctx.fillText(TT('hold'), x0, y0 - 5);
     box(x0, y0, this.hold, 8, this.holdUsed);
+    this.holdBox = { x: x0, y: y0, w: BW, h: BH };   // the training card points at it
 
     const nx = x0 + BW + 14;
     ctx.fillStyle = '#7d6b53';
@@ -4548,13 +5275,15 @@ class Game {
     ctx.font = '600 12px ' + FD;
     ctx.fillText(T('sh_' + nd.key), nx, y0 + BH + 13);
 
-    // strain / limit markers, pinned to the right edge of the canvas
+    // strain / limit markers, pinned to the right edge of the canvas; they
+    // stand down while the training signboard is naming the same line
+    const namingLine = this.tutorial && TUT_STEPS[this.tutorial.step].spot === 'line';
     ctx.font = '700 9px ' + FM;
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgba(150,45,30,.95)';
     const ry = this.sy(CFG.overheatRow * CFG.cell), ly = this.sy(CFG.heightLimit * CFG.cell);
-    if (ry > 12 && ry < CH) ctx.fillText(T('strain'), CW - 8, ry - 4);
-    if (ly > 12 && ly < CH) ctx.fillText(T('limit'), CW - 8, ly - 4);
+    if (!namingLine && ry > 12 && ry < CH) ctx.fillText(T('strain'), CW - 8, ry - 4);
+    if (!namingLine && ly > 12 && ly < CH) ctx.fillText(T('limit'), CW - 8, ly - 4);
     ctx.textAlign = 'left';
 
     if (this.overheat > 0 && !this.gameOver) {
@@ -4608,14 +5337,30 @@ class Game {
     const fade = b.t > b.life - .5 ? (b.life - b.t) / .5 : 1;
     ctx.globalAlpha = Math.max(0, Math.min(1, fade));
     ctx.textAlign = 'center';
-    ctx.font = '600 ' + (21 + k * 7) + 'px ' + FD;
+    /* sized to the field: on a phone the full size ran off both edges */
+    let fs = 21 + k * 7;
+    ctx.font = '600 ' + fs + 'px ' + FD;
+    const fitW = ctx.measureText(b.text).width;
+    if (fitW > CW - 24) { fs = Math.max(12, fs * (CW - 24) / fitW); ctx.font = '600 ' + fs.toFixed(1) + 'px ' + FD; }
+    /* centred on the field, unless the floating coach card is sitting on that
+       spot: then centred on the sky left of the card, clamped to the canvas */
+    let bx = CW / 2, by = CH * 0.3;
+    const half = ctx.measureText(b.text).width / 2 + 10;
+    const cl = this.tutorial ? coachFloatLeft() : null;
+    if (cl !== null && bx + half > cl) bx = Math.max(half, Math.min(bx, cl - half));
+    /* and around a training signboard: over it if that clears the piece
+       strip, otherwise under it */
+    const lb = this.tutorial && this.coachLabelBox;
+    if (lb && bx + half > lb.l && bx - half < lb.r && by + 8 > lb.t && by - fs < lb.b) {
+      by = lb.t - 8 - fs > 80 ? lb.t - 8 : Math.min(CH - 12, lb.b + fs + 4);
+    }
     // a cream outline keeps banner text legible over sky, grass or a crowd
     ctx.lineWidth = 4.5;
     ctx.strokeStyle = 'rgba(255,250,232,.92)';
     ctx.lineJoin = 'round';
-    ctx.strokeText(b.text, CW / 2, CH * 0.3);
+    ctx.strokeText(b.text, bx, by);
     ctx.fillStyle = b.color;
-    ctx.fillText(b.text, CW / 2, CH * 0.3);
+    ctx.fillText(b.text, bx, by);
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
@@ -4754,7 +5499,7 @@ const ui = {
   coins: $('coins'), coreHp: $('coreHp'), wave: $('wave'), armory: $('armory'),
   hpBar: $('hpBar'), buyBtn: $('buyBtn'), repairBtn: $('repairBtn'),
   upkeep: $('upkeep'), upkeepStat: $('upkeepStat'),
-  pauseBtn: $('pauseBtn'), muteBtn: $('muteBtn'), buyT: $('buyT'), repairT: $('repairT'),
+  pauseBtn: $('pauseBtn'), muteBtn: $('muteBtn'), fsBtn: $('fsBtn'), buyT: $('buyT'), repairT: $('repairT'),
   abBell: $('abBell'), abBellN: $('abBellN'), abBellS: $('abBellS'), abBellCd: $('abBellCd'),
   abRally: $('abRally'), abRallyN: $('abRallyN'), abRallyS: $('abRallyS'), abRallyCd: $('abRallyCd'),
   abMend: $('abMend'), abMendN: $('abMendN'), abMendS: $('abMendS'), abMendCd: $('abMendCd'),
@@ -4777,7 +5522,7 @@ const ui = {
   choice: $('choice'), chHd: $('chHd'), chTitle: $('chTitle'), chCards: $('chCards'), chSum: $('chSum'),
   sectorCard: $('sectorCard'), scNo: $('scNo'), scTitle: $('scTitle'), scLog: $('scLog'), scGo: $('scGo'),
   tut: $('tut'), tutNum: $('tutNum'), tutTitle: $('tutTitle'), tutText: $('tutText'),
-  tutNext: $('tutNext'), tutSkip: $('tutSkip'), tutProg: $('tutProg'),
+  tutNext: $('tutNext'), tutSkip: $('tutSkip'), tutProg: $('tutProg'), tutSlowS: $('tutSlowS'),
   tutSlow: $('tutSlow'), tutSlowT: $('tutSlowT'), tutSlowBar: $('tutSlowBar'),
   toast: $('toast'), fieldState: $('fieldState'), fieldEvent: $('fieldEvent'),
   /* versus */
@@ -4865,6 +5610,7 @@ function applyLanguage() {
   // the sound labels belong to this pass too: switching EN -> RU used to leave
   // the mute button announcing "Sound on" until the next time it was touched
   syncMuteButtons();
+  syncFullscreenButton();
   syncModal();
   resize();
 }
@@ -5284,20 +6030,20 @@ function takeChoice(u) {
  * at nothing is a card the player has to go hunting for.
  */
 const TUT_STEPS = [
-  { k: 'tu1', spot: 'core' },
-  { k: 'tu2', el: '#buyBtn', check: g => !!g.piece || g.placed > 0 },
-  { k: 'tu3', spot: 'piece', check: g => g.rotations > 0 || g.moves > 2 },
-  { k: 'tu_store', check: g => g.stored > 0 },
-  { k: 'tu4', spot: 'piece', check: g => g.placed >= 1 },
-  { k: 'tu5', spot: 'row', check: g => g.placed >= 4 },
-  { k: 'tu6', spot: 'row', check: g => g.linesCleared >= 1 },
+  { k: 'tu1', spot: 'core', cam: 'core', label: 'core' },
+  { k: 'tu2', el: '#buyBtn', cam: 'board', check: g => !!g.piece || g.placed > 0 },
+  { k: 'tu3', spot: 'piece', cam: 'board', label: 'piece', check: g => g.rotations > 0 || g.moves > 2 },
+  { k: 'tu_store', spot: 'store', cam: 'board', el: '#tHold', check: g => g.stored > 0 },
+  { k: 'tu4', spot: 'piece', cam: 'board', label: 'piece', check: g => g.placed >= 1 },
+  { k: 'tu5', spot: 'row', cam: 'board', label: 'front', check: g => g.placed >= 4 },
+  { k: 'tu6', spot: 'row', cam: 'board', label: 'full', check: g => g.linesCleared >= 1 },
   { k: 'tu_salvage', el: '#techStat' },
-  { k: 'tu7', spot: 'line' },
+  { k: 'tu7', spot: 'line', cam: 'line', label: 'line' },
   /* The heal step waited for `repairs > 0` on a Heart that starts full, and
      repair() returns immediately at full health — so the practice it asked for
      could not be done, only skipped. The step now opens by scratching the
      Heart itself: a scripted dent, not an attack, and something to mend. */
-  { k: 'tu8', spot: 'core', el: '#repairBtn', check: g => g.repairs > 0,
+  { k: 'tu8', spot: 'core', cam: 'core', label: 'core', el: '#repairBtn', check: g => g.repairs > 0,
     enter: g => {
       if (g.hp <= g.maxHp * 0.65) return;
       const dent = Math.round(g.maxHp * 0.35);
@@ -5309,8 +6055,19 @@ const TUT_STEPS = [
   /* From here the clock is allowed to run. `canCallWave` reads the same flag,
      so the bar only becomes callable once the card that explains it is up. */
   { k: 'tu_call', live: true, el: '#waveBar', check: g => g.phase === 'fight' },
-  { k: 'tu9', live: true, spot: 'rift' },
-  { k: 'tu_bell', live: true, el: '#abBell', check: g => g.bells > 0 },
+  { k: 'tu9', live: true, spot: 'rift', cam: 'rift', label: 'rift' },
+  /* The bell's real job is knocking shells out of the air, and the practice
+     wave is far too early for the siege guns, so the card fires one itself:
+     a slow shell down a column of the wall, the bell lit, the shell named on
+     the field. If it lands before the bell is rung, another one comes. */
+  { k: 'tu_bell', live: true, el: '#abBell', spot: 'shell', label: 'shell', cam: 'board',
+    check: g => g.deflected > 0,
+    enter: g => { g.cdBell = 0; tutShell(g); },
+    tick: (g, dt) => {
+      if (g.barrages.length || g.deflected) { g.tutShellWait = 0; return; }
+      g.tutShellWait = (g.tutShellWait || 0) + dt;
+      if (g.tutShellWait > 1.2) { g.tutShellWait = 0; tutShell(g); }
+    } },
   { k: 'tu_rally', live: true, el: '#abRally', check: g => g.rallies > 0 },
   /* No check on mending: with an undamaged wall the price is zero and the
      button refuses, so waiting for a mend that cannot happen would be the same
@@ -5350,7 +6107,19 @@ const TUT_SLOW = 0.3;
 function tutReadTime(step) {
   const raw = String(TT(step.k + '_d') || '').replace(/<[^>]*>/g, ' ');
   const words = raw.split(/\s+/).filter(Boolean).length;
-  return Math.max(5, Math.min(13, 2 + words / 2));
+  return Math.max(4, Math.min(10, 1.5 + words / 2));
+}
+
+/* One slow training shell, dropped on a column that has something standing
+   in it (a shell on an empty column teaches nothing), aimed at the middle of
+   the wall when there is no wall yet. */
+function tutShell(g) {
+  if (!g || g.gameOver) return;
+  const cols = [];
+  for (let x = 0; x < CFG.cols; x++) if (g.grid[0] && g.grid[0][x]) cols.push(x);
+  const col = cols.length ? cols[Math.floor(cols.length / 2)] : Math.floor(CFG.cols / 2);
+  g.barrages.push({ col, t: 6, warn: 6, dead: false });
+  SFX.incoming();
 }
 
 /* Real seconds are multiplied by this before the game sees them. */
@@ -5366,17 +6135,29 @@ function tutTimeScale() {
    drawCoachSpot() over in the renderer. */
 let coachLit = [];
 function setCoachLit(sel) {
-  for (const el of coachLit) cls(el, 'coachlit', false);
+  for (const el of coachLit) {
+    cls(el, 'coachlit', false);
+    el.style.removeProperty('--lit-origin'); el.style.removeProperty('--lit-dx');
+  }
   coachLit = [];
   if (!sel) return;
   for (const one of sel.split(',')) {
     const el = document.querySelector(one.trim());
-    if (el) { cls(el, 'coachlit', true); coachLit.push(el); }
+    if (!el) continue;
+    /* grow away from the nearest edge of the window, so a stat in the corner
+       swells into the screen rather than off it */
+    const r = el.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+    const ox = r.left < vw * .22 ? 'left' : r.right > vw * .78 ? 'right' : 'center';
+    const oy = r.top < vh * .3 ? 'top' : r.bottom > vh * .7 ? 'bottom' : 'center';
+    el.style.setProperty('--lit-origin', ox + ' ' + oy);
+    // the plate is wider than the element, so step in off a window edge
+    el.style.setProperty('--lit-dx', ox === 'left' && r.left < 20 ? '12px' : ox === 'right' && vw - r.right < 20 ? '-12px' : '0px');
+    cls(el, 'coachlit', true); coachLit.push(el);
   }
 }
 
 function startTutorial() {
-  game.tutorial = { step: 0, read: 0, readMax: 0 };
+  game.tutorial = { step: 0, read: 0, readMax: 0, since: 0 };
   game.coins = 420;          // a sandbox needs room to experiment
   ui.tut.hidden = false;
   renderTutorial();
@@ -5394,6 +6175,7 @@ function tutorialGo(n) {
      are already read in a frozen sandbox, and slowing a frozen field would
      just make the clouds crawl for no reason. */
   t.readMax = t.read = (s.live && !s.done) ? tutReadTime(s) : 0;
+  t.since = 0;               // the field signboard pops in from this
   SFX.step();
   renderTutorial();
 }
@@ -5420,6 +6202,7 @@ function renderTutorial() {
   sty(ui.tutProg, 'transform', 'scaleX(' + (t.step / (TUT_STEPS.length - 1)).toFixed(3) + ')');
   setCoachLit(ui.tut.hidden ? null : s.el);
   put(ui.tutSlowT, T('tut_slow'));
+  put(ui.tutSlowS, T('tut_slow_s'));
   renderReadWindow();
   /* The row is part of the layout, so its height is the field's height:
      re-measure whenever the card changes rather than leaving the canvas
@@ -5458,11 +6241,13 @@ function endTutorial(skipped) {
 function tutorialTick(dt) {
   const t = game.tutorial;
   if (!t) return;
+  t.since = (t.since || 0) + dt;
   if (t.read > 0 && !game.paused && !storyOpen && !choiceOpen) {
     t.read = Math.max(0, t.read - dt);
     renderReadWindow();
   }
   const s = TUT_STEPS[t.step];
+  if (s.tick && !game.paused && !storyOpen && !choiceOpen) s.tick(game, dt);
   if (s.check && s.check(game)) tutorialGo(t.step + 1);
 }
 
@@ -5660,6 +6445,41 @@ function unlockAudio() { SFX.unlock(); syncMuteButtons(); }
 window.addEventListener('pointerdown', unlockAudio, { once: true });
 window.addEventListener('keydown', unlockAudio, { once: true });
 
+/* FULL SCREEN. The page already fills the window; this takes the browser's
+   own bars away too. Offered only where the browser can do it (an iPhone
+   cannot, for anything but video), and the icon follows the real state, since
+   Esc leaves full screen without asking the page. */
+const FS_OK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const inFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function toggleFullscreen() {
+  try {
+    if (inFullscreen()) {
+      const p = (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      if (p && p.catch) p.catch(() => {});
+    } else {
+      const el = document.documentElement;
+      const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el, { navigationUI: 'hide' });
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+}
+function syncFullscreenButton() {
+  const on = inFullscreen();
+  const btn = $('fsBtn'), row = $('fsRow'), sheet = $('fsSheetBtn');
+  if (btn) {
+    btn.hidden = !FS_OK;
+    cls(btn, 'full', on);
+    att(btn, 'aria-label', T(on ? 'a_fsOff' : 'a_fsOn'));
+    btn.title = T(on ? 'a_fsOff' : 'a_fsOn');
+  }
+  // the pause sheet carries the same switch for phones, where the HUD has no room
+  if (row) row.hidden = !FS_OK;
+  if (sheet) { put(sheet, T(on ? 'fs_off' : 'fs_on')); att(sheet, 'aria-pressed', String(on)); }
+  put($('lScreen'), T('screen'));
+}
+document.addEventListener('fullscreenchange', syncFullscreenButton);
+document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+
 function syncMuteButtons() {
   const off = SFX.muted || SFX.vol === 0;
   const label = T(off ? 'a_soundOff' : 'a_soundOn');
@@ -5814,6 +6634,8 @@ ui.abBell.addEventListener('click', () => game.ringBell());
 ui.abRally.addEventListener('click', () => game.soundRally());
 ui.abMend.addEventListener('click', () => game.mendWall());
 ui.muteBtn.addEventListener('click', () => { SFX.unlock(); SFX.toggleMute(); syncMuteButtons(); });
+ui.fsBtn.addEventListener('click', () => { SFX.ui(); toggleFullscreen(); });
+$('fsSheetBtn').addEventListener('click', () => { SFX.ui(); toggleFullscreen(); });
 ui.waveBar.addEventListener('click', () => {
   if (storyOpen || choiceOpen) return;
   if (game.gameOver) startGame(false); else game.startWave(true);
@@ -6810,6 +7632,7 @@ game = new Game();
 applySettings();
 applyLanguage();
 syncMuteButtons();
+syncFullscreenButton();
 showMenu();
 
 let last = performance.now();
