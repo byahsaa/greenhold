@@ -1453,6 +1453,12 @@ class SoundEngine {
   incoming() {
     this.tone({ f: 1500, f2: 380, type: 'sine', dur: 2.2, vol: 0.075, atk: 0.14, raw: true });
   }
+  /* a shell batted away by the bell: a hard clang, then a whoosh going up */
+  deflect() {
+    this.tone({ f: 1180, f2: 1560, type: 'triangle', dur: 0.2, vol: 0.12, atk: 0.002, raw: true });
+    this.tone({ f: 640, f2: 1280, type: 'sine', dur: 0.5, vol: 0.06, atk: 0.01, delay: 0.05, raw: true });
+    this.noise({ f: 2400, f2: 5200, dur: 0.35, vol: 0.06, filter: 'bandpass', q: 1.2, atk: 0.01, delay: 0.04, raw: true });
+  }
   impact() {
     this.noise({ f: 700, f2: 70, dur: 0.55, vol: 0.2, filter: 'lowpass', q: .8, atk: 0.008, raw: true });
     this.tone({ f: 110, f2: 34, type: 'sine', dur: 0.5, vol: 0.24, raw: true });
@@ -1582,7 +1588,8 @@ const I18N = {
     up_greed_t: 'Work them hard',
 
     bellRung: 'THE BELL RINGS OUT', rallyUp: 'ALL HANDS!',
-    ab_bell: 'Bell', ab_bellS: 'hits every machine, scatters incoming fire',
+    shellKnocked: 'SHELL KNOCKED AWAY!', deflected: 'DEFLECTED!',
+    ab_bell: 'Bell', ab_bellS: 'knocks shells away, hits every machine',
     ab_rally: 'Rally', ab_rallyS: 'everything shoots twice as fast',
     ab_mend: 'Mend wall', ab_mendS: 'patch every building at once',
     ab_ready: 'ready', ab_nothing: 'nothing to mend',
@@ -1590,56 +1597,59 @@ const I18N = {
 
     tut_skip: 'Skip', tut_next: 'Next', tut_gotit: 'Got it', tut_start: 'Start defending',
     tut_slow: 'Slowed while you read', tut_slow_s: 'Slow-mo',
-    cl_front: 'Front row', cl_full: 'Full row', cl_line: 'Load line', cl_rift: 'The Rift',
+    cl_front: 'Front row', cl_full: 'Full row', cl_line: 'Load line', cl_rift: 'The Rift', cl_shell: 'Shell!',
     tut_safe: 'TRAINING: THE HEART HOLDS',
     tut_done_t: 'Training done',
-    tut_done_d: 'That is the whole yard. The real thing starts now: waves get bigger, new machines walk out of that ridge, and nothing waits for you. Good luck, builder.',
+    tut_done_d: 'That is everything. Waves only get bigger from here. Good luck!',
     tut_skipped: 'Training skipped, good luck',
 
     tu1_t: 'This is the Heart',
-    tu1_d: 'This spring is the Heart of the settlement. All of this is about keeping it lit. When its bar reaches zero, the run is over.',
-    tu2_t: 'Build something',
-    tu2_d: 'Press <b>SPACE</b> or hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
-    tu2_d_touch: 'Hit <b>Build</b>. The yard casts a four-block section and swings it out over the field.',
+    tu1_d: 'Guard it. If its water runs out, you lose.',
+    tu2_t: 'Build',
+    tu2_d: 'Press <b>SPACE</b> or <b>Build</b> to get a section.',
+    tu2_d_touch: 'Tap <b>Build</b> to get a section.',
     tu3_t: 'Aim it',
-    tu3_d: 'Hold the <b>left mouse button</b> and drag it along the line, or use <b>A</b> / <b>D</b>. <b>W</b> turns it. The dashed circle is how far that building can reach.',
-    tu3_d_touch: 'Drag your finger across the field and the section follows it. <b>Tap the field</b> to turn it. The dashed circle is how far that building can reach.',
+    tu3_d: 'Move: <b>A</b>/<b>D</b> or drag. Turn: <b>W</b>. The circle is its reach.',
+    tu3_d_touch: '<b>Drag</b> to move it, <b>tap</b> to turn it. The circle is its reach.',
     tu_store_t: 'Keep one back',
-    tu_store_d: 'The section in your hands is not always the one the wall needs. <b>C</b> puts it in store and hands you the next one. Press it again and the two swap.',
-    tu_store_d_touch: '<b>Flick up</b> on the field, or hit <b>Store</b>, and the section goes aside for later. Do it again and the stored one comes back.',
-    tu4_t: 'Set it down',
-    tu4_d: 'Press <b>SPACE</b> again and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
-    tu4_d_touch: '<b>Flick down</b> on the field, or hit <b>Slam</b>, and it sets down. From there it aims and shoots on its own. You never fire anything by hand.',
-    tu5_t: 'Make a wall',
-    tu5_d: 'Keep building. Buildings block the walkers as well as shoot them, so a solid front row is armour and firepower at once. Set down three more.',
+    tu_store_d: '<b>C</b> puts this section aside for later.',
+    tu_store_d_touch: '<b>Swipe up</b> or tap <b>Store</b> to keep it for later.',
+    tu4_t: 'Drop it',
+    tu4_d: '<b>SPACE</b> sets it down. It shoots on its own.',
+    tu4_d_touch: '<b>Swipe down</b> or tap <b>Slam</b>. It shoots on its own.',
+    tu5_t: 'Build a wall',
+    tu5_d: 'Buildings block machines and shoot them. Place <b>3 more</b>.',
     tu6_t: 'Close a row',
-    tu6_d: 'Fill a row all the way across the ten columns and it closes: a shockwave knocks down every machine on the field. The row is spent doing it, so those buildings are gone and the stack drops onto the gap. Close a row you can afford to lose.',
-    tu_salvage_t: 'What a closed row leaves',
-    tu_salvage_d: 'A closed row pays stock once, and it pays <b>salvage</b> for good. Salvage raises the health and damage of every building you have and every one you raise after it. It is the only number here that never goes down.',
-    tu7_t: 'Watch the load line',
-    tu7_d: 'The dashed red line is what the ground will bear. Anything stacked above it splits and collapses on its own. Build wide, not tall.',
-    tu8_t: 'Mend the Heart',
-    tu8_d: 'Something got through and the Heart is down. Press <b>R</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
-    tu8_d_touch: 'Something got through and the Heart is down. Hit <b>Heal</b> to spend stock on it. Each mend inside the same wave costs more than the one before.',
-    tu_call_t: 'Call them early',
-    tu_call_d: 'The bar above the field counts down to the next wave. <b>ENTER</b> calls it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
-    tu_call_d_touch: 'The bar above the field counts down to the next wave. <b>Tap the bar</b> to call it in early, and the more time is still on the clock the bigger the payout. Call it when your wall is ready.',
+    tu6_d: 'Fill all <b>10 columns</b>: a blast hits every machine. The row is used up.',
+    tu_salvage_t: 'Salvage',
+    tu_salvage_d: 'Each closed row gives <b>salvage</b>: every building gets stronger for good.',
+    tu7_t: 'Load line',
+    tu7_d: 'Blocks above the <b>red line</b> fall apart. Build wide, not tall.',
+    tu8_t: 'Heal the Heart',
+    tu8_d: 'Press <b>R</b> to heal it with stock.',
+    tu8_d_touch: 'Tap <b>Heal</b> to heal it with stock.',
+    tu_call_t: 'Call the wave',
+    tu_call_d: '<b>ENTER</b> starts it early. Earlier means a bigger reward.',
+    tu_call_d_touch: 'Tap <b>the bar</b> to start early. Earlier means a bigger reward.',
     tu9_t: 'Here they come',
-    tu9_d: 'Your buildings aim and fire on their own. The wall is your job: keep building, and keep it closed.',
-    tu_bell_t: 'The bell',
-    tu_bell_d: '<b>Bell</b> hits every machine on the field at once, shoves them back a step and throws their aim off. It costs no stock and takes 24 seconds to come back. Ring it.',
-    tu_rally_t: 'The horn',
-    tu_rally_d: '<b>Rally</b> has everyone working the cranks twice as fast for a few seconds. Also free, and thirty seconds to come back. Keep it for the moment the front row is about to go.',
+    tu9_d: 'Machines walk out of <b>the Rift</b>. Your buildings fire by themselves.',
+    tu_bell_t: 'Shell incoming!',
+    tu_bell_d: 'Ring the <b>Bell</b> (<b>Q</b>): it knocks shells out of the air.',
+    tu_bell_d_touch: 'Tap <b>Bell</b>: it knocks shells out of the air.',
+    tu_rally_t: 'Rally',
+    tu_rally_d: '<b>E</b>: everyone shoots twice as fast for 6 seconds.',
+    tu_rally_d_touch: '<b>Rally</b>: everyone shoots twice as fast for 6 seconds.',
     tu_mend_t: 'Patch the wall',
-    tu_mend_d: 'Buildings wear down while a wave is breaking on them. <b>Mend wall</b> puts all of them back to full for stock, and the price follows how much damage there is to undo.',
-    tu_held_t: 'Hold it',
-    tu_held_d: 'Keep the wall closed until the last machine is down.',
-    tu_upkeep_t: 'The wall sends a bill',
-    tu_upkeep_d: 'Every wave you hold ends with <b>upkeep</b>. The wall charges you stock simply for standing there, and it charges more the further you get. Come up short and the buildings take the difference out of their own health.',
-    tu_hoard_t: 'Sitting on stock costs too',
-    tu_hoard_d: 'The bill is the larger of two numbers: what your wall costs, and a quarter of whatever stock you are sitting on. A full purse is taxed like a long wall, so put it into building instead of saving it for later.',
-    tu_cards_t: 'Pick one',
-    tu_cards_d: 'A held wave ends with three cards and you take one of them. Each card says what it will do to your own numbers before you commit, so read the line along the bottom. Some of them ask for something back.',
+    tu_mend_d: '<b>F</b> repairs every building at once, for stock.',
+    tu_mend_d_touch: '<b>Mend wall</b> repairs every building at once, for stock.',
+    tu_held_t: 'Hold on',
+    tu_held_d: 'Keep the wall up until the last machine falls.',
+    tu_upkeep_t: 'Upkeep',
+    tu_upkeep_d: 'After each wave the wall costs stock: <b>upkeep</b>. Short of stock? It loses health.',
+    tu_hoard_t: 'Spend your stock',
+    tu_hoard_d: 'Saved-up stock is taxed too. Build with it instead.',
+    tu_cards_t: 'Pick a card',
+    tu_cards_d: 'After each wave take <b>1 of 3</b> upgrades. Red text is the price.',
     /* ---- online: accounts, rooms, and the two-field race ---- */
     m_online: 'Versus', m_onlineSub: 'Same seed, two fields, one long night',
     on_title: 'Versus',
@@ -1831,7 +1841,8 @@ const I18N = {
     up_greed_t: 'Гнать в три смены',
 
     bellRung: 'УДАРИЛИ В КОЛОКОЛ', rallyUp: 'ВСЕ НА СТЕНУ!',
-    ab_bell: 'Колокол', ab_bellS: 'бьёт по всем машинам, сбивает наводку',
+    shellKnocked: 'СНАРЯД ОТБИТ!', deflected: 'ОТБИТ!',
+    ab_bell: 'Колокол', ab_bellS: 'отбивает снаряды, бьёт по всем машинам',
     ab_rally: 'Подмога', ab_rallyS: 'всё стреляет вдвое быстрее',
     ab_mend: 'Латать стену', ab_mendS: 'залатать все постройки разом',
     ab_ready: 'готово', ab_nothing: 'латать нечего',
@@ -1839,56 +1850,59 @@ const I18N = {
 
     tut_skip: '\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c', tut_next: '\u0414\u0430\u043b\u044c\u0448\u0435', tut_gotit: '\u041f\u043e\u043d\u044f\u043b', tut_start: '\u041a \u043e\u0431\u043e\u0440\u043e\u043d\u0435',
     tut_slow: 'Замедлено, пока читаешь', tut_slow_s: 'Замедл.',
-    cl_front: 'Первый ряд', cl_full: 'Целый ряд', cl_line: 'Черта нагрузки', cl_rift: 'Разлом',
+    cl_front: 'Первый ряд', cl_full: 'Целый ряд', cl_line: 'Черта нагрузки', cl_rift: 'Разлом', cl_shell: 'Снаряд!',
     tut_safe: 'ОБУЧЕНИЕ: СЕРДЦЕ НЕ ПОГАСНЕТ',
     tut_done_t: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0439\u0434\u0435\u043d\u043e',
-    tut_done_d: '\u042d\u0442\u043e \u0432\u0435\u0441\u044c \u0434\u0432\u043e\u0440. \u0414\u0430\u043b\u044c\u0448\u0435 \u043f\u043e-\u043d\u0430\u0441\u0442\u043e\u044f\u0449\u0435\u043c\u0443: \u0432\u043e\u043b\u043d\u044b \u0440\u0430\u0441\u0442\u0443\u0442, \u0438\u0437-\u0437\u0430 \u043a\u0440\u044f\u0436\u0430 \u0432\u044b\u0445\u043e\u0434\u044f\u0442 \u043d\u043e\u0432\u044b\u0435 \u043c\u0430\u0448\u0438\u043d\u044b, \u0438 \u043d\u0438\u043a\u0442\u043e \u0442\u0435\u0431\u044f \u043d\u0435 \u0436\u0434\u0451\u0442. \u0423\u0434\u0430\u0447\u0438, \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c.',
+    tut_done_d: 'Это всё. Дальше волны только больше. Удачи!',
     tut_skipped: '\u041e\u0431\u0443\u0447\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u043f\u0443\u0449\u0435\u043d\u043e, \u0443\u0434\u0430\u0447\u0438',
 
-    tu1_t: '\u042d\u0442\u043e \u0421\u0435\u0440\u0434\u0446\u0435',
-    tu1_d: 'Этот родник: \u0421\u0435\u0440\u0434\u0446\u0435 \u043f\u043e\u0441\u0435\u043b\u0435\u043d\u0438\u044f. \u0412\u0441\u044f \u0438\u0433\u0440\u0430 \u043e \u0442\u043e\u043c, \u0447\u0442\u043e\u0431\u044b \u043e\u043d\u043e \u043d\u0435 \u043f\u043e\u0433\u0430\u0441\u043b\u043e. \u0415\u0433\u043e \u043f\u043e\u043b\u043e\u0441\u0430 \u0434\u043e\u0439\u0434\u0451\u0442 \u0434\u043e \u043d\u0443\u043b\u044f, \u0437\u0430\u0431\u0435\u0433 \u043e\u043a\u043e\u043d\u0447\u0435\u043d.',
-    tu2_t: '\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0447\u0442\u043e-\u043d\u0438\u0431\u0443\u0434\u044c',
-    tu2_d: '\u041d\u0430\u0436\u043c\u0438 <b>\u041f\u0420\u041e\u0411\u0415\u041b</b> \u0438\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
-    tu2_d_touch: '\u0416\u043c\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 <b>\u0421\u0442\u0440\u043e\u0438\u0442\u044c</b>. \u0414\u0432\u043e\u0440 \u043e\u0442\u043b\u0438\u0432\u0430\u0435\u0442 \u0441\u0435\u043a\u0446\u0438\u044e \u0438\u0437 \u0447\u0435\u0442\u044b\u0440\u0451\u0445 \u0431\u043b\u043e\u043a\u043e\u0432 \u0438 \u0432\u044b\u043d\u043e\u0441\u0438\u0442 \u0435\u0451 \u043d\u0430\u0434 \u043f\u043e\u043b\u0435\u043c.',
-    tu3_t: '\u041d\u0430\u0432\u0435\u0434\u0438',
-    tu3_d: 'Зажми <b>левую кнопку мыши</b> и веди секцию вдоль линии, или жми <b>A</b> / <b>D</b>. <b>W</b> повернёт. Пунктирный круг: насколько далеко эта постройка достаёт.',
-    tu3_d_touch: 'Веди пальцем по полю, и секция идёт за ним. <b>Тап по полю</b> повернёт её. Пунктирный круг: насколько далеко эта постройка достаёт.',
-    tu_store_t: 'Отложи про запас',
-    tu_store_d: 'Секция в руках не всегда та, которой не хватает стене. <b>C</b> уберёт её в запас и выдаст следующую. Нажми ещё раз, и они поменяются местами.',
-    tu_store_d_touch: '<b>Свайп вверх</b> по полю или кнопка <b>Запас</b>, и секция уходит на потом. Ещё раз, и отложенная вернётся в руки.',
-    tu4_t: '\u041f\u043e\u0441\u0442\u0430\u0432\u044c',
-    tu4_d: 'Снова <b>ПРОБЕЛ</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
-    tu4_d_touch: '<b>Свайп вниз</b> по полю или кнопка <b>Бросок</b>, и секция встаёт на место. Дальше она сама наводится и сама стреляет: вручную ты не стреляешь никогда.',
-    tu5_t: '\u0421\u043e\u0431\u0435\u0440\u0438 \u0441\u0442\u0435\u043d\u0443',
-    tu5_d: '\u0421\u0442\u0440\u043e\u0439 \u0434\u0430\u043b\u044c\u0448\u0435. \u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u0442\u0440\u0435\u043b\u044f\u044e\u0442, \u043d\u043e \u0438 \u0434\u0435\u0440\u0436\u0430\u0442 \u0448\u0430\u0433\u0430\u044e\u0449\u0438\u0445, \u043f\u043b\u043e\u0442\u043d\u044b\u0439 \u043f\u0435\u0440\u0432\u044b\u0439 \u0440\u044f\u0434 \u044d\u0442\u043e \u0431\u0440\u043e\u043d\u044f \u0438 \u043e\u0433\u043d\u0435\u0432\u0430\u044f \u043c\u043e\u0449\u044c \u0440\u0430\u0437\u043e\u043c. \u041f\u043e\u0441\u0442\u0430\u0432\u044c \u0435\u0449\u0451 \u0442\u0440\u0438.',
-    tu6_t: '\u0421\u043e\u043c\u043a\u043d\u0438 \u0440\u044f\u0434',
-    tu6_d: 'Забей ряд во все десять колонок, и он сомкнётся: ударная волна валит все машины на поле. Ряд на это и тратится, эти постройки исчезают, а стена оседает вниз. Смыкай тот ряд, который не жалко.',
-    tu_salvage_t: 'Что остаётся от ряда',
-    tu_salvage_d: 'Сомкнутый ряд разом платит припасом и насовсем даёт <b>лом</b>. Лом поднимает прочность и урон всем постройкам, и тем, что уже стоят, и тем, что поставишь после. Это единственное здешнее число, которое не падает.',
-    tu7_t: '\u0421\u043b\u0435\u0434\u0438 \u0437\u0430 \u0447\u0435\u0440\u0442\u043e\u0439 \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0438',
-    tu7_d: '\u041f\u0443\u043d\u043a\u0442\u0438\u0440\u043d\u0430\u044f \u043a\u0440\u0430\u0441\u043d\u0430\u044f \u043b\u0438\u043d\u0438\u044f: \u0441\u043a\u043e\u043b\u044c\u043a\u043e \u0434\u0435\u0440\u0436\u0438\u0442 \u0437\u0435\u043c\u043b\u044f. \u0412\u0441\u0451, \u0447\u0442\u043e \u0432\u044b\u0448\u0435, \u0442\u0440\u0435\u0441\u043a\u0430\u0435\u0442\u0441\u044f \u0438 \u043e\u0431\u0432\u0430\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0441\u0430\u043c\u043e. \u0421\u0442\u0440\u043e\u0439 \u0432\u0448\u0438\u0440\u044c, \u0430 \u043d\u0435 \u0432\u0432\u044b\u0441\u044c.',
+    tu1_t: 'Это Сердце',
+    tu1_d: 'Береги его. Кончится вода: игра окончена.',
+    tu2_t: 'Строй',
+    tu2_d: '<b>ПРОБЕЛ</b> или <b>Строить</b>: получить секцию.',
+    tu2_d_touch: 'Жми <b>Строить</b>, чтобы получить секцию.',
+    tu3_t: 'Наведи',
+    tu3_d: 'Двигай: <b>A</b>/<b>D</b> или мышью. Поворот: <b>W</b>. Круг: дальность.',
+    tu3_d_touch: '<b>Веди пальцем</b>, чтобы двигать, <b>тап</b>, чтобы повернуть. Круг: дальность.',
+    tu_store_t: 'Отложи',
+    tu_store_d: '<b>C</b> убирает секцию про запас.',
+    tu_store_d_touch: '<b>Свайп вверх</b> или <b>Запас</b>: отложить на потом.',
+    tu4_t: 'Поставь',
+    tu4_d: '<b>ПРОБЕЛ</b> ставит секцию. Стреляет она сама.',
+    tu4_d_touch: '<b>Свайп вниз</b> или <b>Бросок</b>. Стреляет она сама.',
+    tu5_t: 'Собери стену',
+    tu5_d: 'Постройки держат машины и стреляют. Поставь ещё <b>3</b>.',
+    tu6_t: 'Сомкни ряд',
+    tu6_d: 'Заполни все <b>10 колонок</b>: взрыв ударит по всем машинам. Ряд исчезнет.',
+    tu_salvage_t: 'Лом',
+    tu_salvage_d: 'За каждый ряд дают <b>лом</b>: все постройки навсегда сильнее.',
+    tu7_t: 'Черта нагрузки',
+    tu7_d: 'Всё выше <b>красной черты</b> рушится. Строй вширь, а не ввысь.',
     tu8_t: 'Почини Сердце',
-    tu8_d: 'Что-то прорвалось, и Сердце просело. Жми <b>R</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
-    tu8_d_touch: 'Что-то прорвалось, и Сердце просело. Жми <b>Лечить</b>, чтобы потратить на него припас. Каждое лечение в пределах одной волны дороже предыдущего.',
-    tu_call_t: 'Позови раньше',
-    tu_call_d: 'Полоса над полем отсчитывает время до следующей волны. <b>ENTER</b> вызовет её раньше срока, и чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
-    tu_call_d_touch: 'Полоса над полем отсчитывает время до следующей волны. <b>Тапни по полосе</b>, и волна придёт раньше срока: чем больше осталось на часах, тем крупнее награда. Зови, когда стена готова.',
-    tu9_t: '\u0412\u043e\u0442 \u0438 \u043e\u043d\u0438',
-    tu9_d: 'Постройки сами наводятся и сами стреляют. Стена на тебе: строй дальше и держи её сомкнутой.',
-    tu_bell_t: 'Колокол',
-    tu_bell_d: '<b>Колокол</b> бьёт разом по всем машинам на поле, отталкивает их на шаг и сбивает наводку. Припаса не стоит, возвращается 24 секунды. Ударь в него.',
+    tu8_d: '<b>R</b> лечит его за припасы.',
+    tu8_d_touch: '<b>Лечить</b>: лечение за припасы.',
+    tu_call_t: 'Зови волну',
+    tu_call_d: '<b>ENTER</b> начинает волну раньше. Раньше: больше награда.',
+    tu_call_d_touch: 'Тапни <b>полосу</b>, чтобы начать раньше. Раньше: больше награда.',
+    tu9_t: 'Вот и они',
+    tu9_d: 'Машины выходят из <b>Разлома</b>. Постройки стреляют сами.',
+    tu_bell_t: 'Снаряд летит!',
+    tu_bell_d: 'Бей в <b>Колокол</b> (<b>Q</b>): он отбивает снаряды на лету.',
+    tu_bell_d_touch: 'Жми <b>Колокол</b>: он отбивает снаряды на лету.',
     tu_rally_t: 'Подмога',
-    tu_rally_d: '<b>Подмога</b> заставляет всех крутить вороты вдвое быстрее на несколько секунд. Тоже бесплатно, возвращается тридцать секунд. Береги её на тот момент, когда первый ряд вот-вот проломят.',
+    tu_rally_d: '<b>E</b>: 6 секунд все стреляют вдвое быстрее.',
+    tu_rally_d_touch: '<b>Подмога</b>: 6 секунд все стреляют вдвое быстрее.',
     tu_mend_t: 'Латай стену',
-    tu_mend_d: 'Постройки изнашиваются, пока об них бьётся волна. <b>Латать стену</b> чинит их все разом за припас, и цена идёт за тем, сколько повреждений надо свести.',
-    tu_held_t: 'Держи',
-    tu_held_d: 'Держи стену сомкнутой, пока не упадёт последняя машина.',
-    tu_upkeep_t: 'Стена выставляет счёт',
-    tu_upkeep_d: 'Каждая отбитая волна кончается <b>содержанием</b>. Стена берёт с тебя припас просто за то, что стоит, и берёт тем больше, чем дальше ты зашёл. Не хватит припаса, и разницу постройки вычтут из собственной прочности.',
-    tu_hoard_t: 'Копить тоже дорого',
-    tu_hoard_d: 'Счёт это большее из двух чисел: во что обходится твоя стена и четверть припаса, который лежит без дела. Полный кошель облагают как длинную стену, так что вкладывай его в постройки, а не береги на потом.',
-    tu_cards_t: 'Выбери одну',
-    tu_cards_d: 'Отбитая волна кончается тремя карточками, и одну ты берёшь. Каждая показывает, что сделает именно с твоими числами, ещё до того как ты согласишься, так что читай строку внизу. Некоторые просят что-то взамен.',
+    tu_mend_d: '<b>F</b> чинит все постройки разом за припасы.',
+    tu_mend_d_touch: '<b>Латать стену</b> чинит все постройки разом за припасы.',
+    tu_held_t: 'Держись',
+    tu_held_d: 'Держи стену, пока не упадёт последняя машина.',
+    tu_upkeep_t: 'Содержание',
+    tu_upkeep_d: 'После волны стена берёт припасы: <b>содержание</b>. Не хватит: теряет прочность.',
+    tu_hoard_t: 'Трать припасы',
+    tu_hoard_d: 'Накопленное тоже облагают. Лучше строй.',
+    tu_cards_t: 'Выбери карту',
+    tu_cards_d: 'После волны бери <b>1 из 3</b> улучшений. Красное: цена.',
     /* ---- онлайн: аккаунты, комнаты и гонка на два поля ---- */
     m_online: 'Матч', m_onlineSub: 'Один сид, два поля, одна длинная ночь',
     on_title: 'Матч',
@@ -2017,16 +2031,18 @@ const CFG = {
   /* how far the camera may pull back; the framing rule below keeps the load
      line in view, so this only bites on very small windows */
   minZoom: 0.5,
-  /* How close it may come. The yard used to be framed up to the load line at
-     all times, which on a wide window left it in the bottom-left corner with
-     the right half of the screen empty. It now frames the stack, the piece in
-     the air and a little headroom, at least viewMinRows tall, and pulls back
-     to take in the load line once the stack is within lineWarnRows of it. */
-  maxZoom: 2.0,
-  viewMinRows: 7,
-  lineWarnRows: 5,
+  /* How close it may come. The whole field is always in frame: the Heart and
+     the farmer, all ten columns up to the load line and a row over it, the
+     run-up and the Rift. Leaning in close made the blocks big and the fight
+     unreadable, since you could no longer see the wall and the machines at
+     once. On a window wider than the field needs, the field sits in the
+     middle and the backdrop fills the sides: the town on the left, the
+     harvested ground on the right. */
+  maxZoom: 1.25,
+  viewHeadroom: 1.5,     // rows framed above the load line or the stack
+  viewPadL: 34,          // world units left of the Heart: where the farmer stands
   /* training: how far the camera may lean in on the thing a card is about */
-  coachMaxZoom: 2.5,
+  coachMaxZoom: 2.2,
 
   /* --- tetris feel: slower, forgiving, tap-accurate --- */
   fallInterval: 0.95,
@@ -2438,6 +2454,12 @@ function limb(bx, by, fx, fy, lift, w) {
 const FD = 'Oswald, "Arial Narrow", Impact, sans-serif';
 const FM = '"JetBrains Mono", ui-monospace, Consolas, monospace';
 
+/* blend two #rrggbb colours; t = 0 gives a, t = 1 gives b */
+function mixHex(a, b, t) {
+  const p = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const x = p(a), y = p(b);
+  return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',') + ')';
+}
 function ellipse(x, y, rx, ry, rot) {
   ctx.beginPath();
   ctx.ellipse(x, y, Math.max(.4, rx), Math.max(.4, ry), rot || 0, 0, Math.PI * 2);
@@ -2525,6 +2547,8 @@ class Game {
     /* incoming siege shots, each with a column and a countdown */
     this.barrages = [];
     this.barrageTimer = 0;
+    this.deflects = [];      // shells the bell knocked away, still flying off
+    this.deflected = 0;
     this.hurtFlash = 0;
     this.placed = 0;
     this.rotations = 0;
@@ -3068,6 +3092,11 @@ class Game {
      at the wall. You get a marked column and a couple of seconds: ring the
      bell to scatter their aim, or accept the hole and rebuild. */
   updateBarrages(dt) {
+    for (let i = this.deflects.length - 1; i >= 0; i--) {
+      const d = this.deflects[i];
+      d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy -= 260 * dt; d.rot += dt * 14;
+      if (d.t > d.life) this.deflects.splice(i, 1);
+    }
     for (let i = this.barrages.length - 1; i >= 0; i--) {
       const b = this.barrages[i];
       if (b.dead) { this.barrages.splice(i, 1); continue; }
@@ -3110,11 +3139,21 @@ class Game {
     }
   }
 
+  /* Where a falling shell is on screen: it drops down its marked column over
+     the warning time, so the bell has something visible to hit. */
+  shellAt(b) {
+    const k = 1 - Math.max(0, b.t) / (b.warn || CFG.barrageWarn);
+    // it starts under the piece strip, not behind it, and lands on the stack
+    const y0 = 92, y1 = Math.max(y0 + 40, this.originY - 30);
+    return { k, x: this.sx(b.col * CFG.cell + CFG.cell / 2), y: y0 + k * (y1 - y0) };
+  }
+
   drawBarrages() {
+    this.drawDeflects();
     if (!this.barrages.length) return;
     for (const b of this.barrages) {
       const x = this.sx(b.col * CFG.cell), w = CFG.cell * this.scale;
-      const k = 1 - Math.max(0, b.t) / CFG.barrageWarn;
+      const k = 1 - Math.max(0, b.t) / (b.warn || CFG.barrageWarn);
       // a steady marker still says "this column", it just stops strobing
       const blink = calm ? .6 : .35 + Math.abs(Math.sin(this.time * (7 + k * 9))) * .45;
       ctx.fillStyle = 'rgba(191,68,51,' + (0.1 + k * 0.16) * blink + ')';
@@ -3122,14 +3161,58 @@ class Game {
       ctx.strokeStyle = 'rgba(191,68,51,' + blink + ')';
       ctx.lineWidth = 2;
       ctx.strokeRect(x + 1, 0, w - 2, this.originY);
-      // a chevron sliding down the column as the shell falls
-      const my = 14 + k * (this.originY - 40);
+      // a chevron sliding down the column under the shell as it falls
+      const my = this.shellAt(b).y + 12;
       ctx.fillStyle = 'rgba(191,68,51,' + (0.55 + blink * 0.45) + ')';
       ctx.beginPath();
       ctx.moveTo(x + w / 2, my + 11);
       ctx.lineTo(x + w / 2 - 8, my);
       ctx.lineTo(x + w / 2 + 8, my);
       ctx.closePath(); ctx.fill();
+      // the shell itself, riding the marker down: an iron ball with a lit fuse
+      const sh = this.shellAt(b);
+      this.drawShell(sh.x, sh.y, Math.max(6, 8.5 * this.scale * this.readK), 0, 1, true);
+    }
+  }
+
+  drawShell(x, y, r, rot, a, falling) {
+    ctx.save();
+    ctx.globalAlpha = a;
+    // a smoke streak above it while it drops (a batted shell has its own streak)
+    if (falling) {
+      ctx.strokeStyle = 'rgba(90,80,70,.28)'; ctx.lineWidth = r * .9; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, y - r * 3.2); ctx.lineTo(x, y - r * .6); ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+    ctx.translate(x, y); ctx.rotate(rot);
+    ctx.fillStyle = '#3a3634';
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(191,68,51,.9)'; ctx.lineWidth = Math.max(1.2, r * .18);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.beginPath(); ctx.arc(-r * .32, -r * .32, r * .3, 0, 6.3); ctx.fill();
+    // fuse and its spark
+    ctx.strokeStyle = '#7a5a35'; ctx.lineWidth = Math.max(1, r * .16);
+    ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * .35, -r * 1.45); ctx.stroke();
+    const flick = calm ? 1 : .7 + Math.random() * .6;
+    ctx.fillStyle = 'rgba(255,190,70,.95)';
+    ctx.beginPath(); ctx.arc(r * .38, -r * 1.5, r * .26 * flick, 0, 6.3); ctx.fill();
+    ctx.restore();
+  }
+
+  /* Shells the bell knocked out of the air, spinning away back over the ridge. */
+  drawDeflects() {
+    for (const d of this.deflects) {
+      const a = Math.max(0, 1 - d.t / d.life);
+      const x = this.sx(d.x), y = this.sy(d.y);
+      // the streak it leaves on the way out
+      ctx.strokeStyle = 'rgba(255,214,120,' + (.55 * a).toFixed(3) + ')';
+      ctx.lineWidth = Math.max(2, d.r * .7); ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - d.vx * this.scale * .08, y + d.vy * this.scale * .08);
+      ctx.stroke(); ctx.lineCap = 'butt';
+      this.drawShell(x, y, d.r * (1 - .35 * d.t / d.life), d.rot, a);
     }
   }
 
@@ -3148,11 +3231,28 @@ class Game {
       e.x += 16;
       e.slow = Math.max(e.slow, 0.8); e.slowPow = 0.5;
     }
-    for (const b of this.barrages) b.dead = true;
+    /* Every shell in the air is batted away: it leaves as a visible shot back
+       towards the ridge, so the player sees what the bell just did. */
+    let knocked = 0;
+    for (const b of this.barrages) {
+      if (b.dead) continue;
+      b.dead = true;
+      knocked++;
+      const sh = this.shellAt(b);
+      const wx = b.col * CFG.cell + CFG.cell / 2;
+      const wy = Math.max(CFG.cell, (this.originY - sh.y) / this.scale);
+      // a flat arc back over the run-up towards the ridge it came from
+      this.deflects.push({ x: wx, y: wy, vx: 440 + STREAM.local.range(0, 80), vy: 170 + STREAM.local.range(0, 50),
+                           t: 0, life: 1.3, rot: 0, r: Math.max(6, 8.5 * this.scale * this.readK) });
+      this.burst(wx, wy, '#f0c050', 14);
+      this.floatText(wx, wy + 18, T('deflected'), '#cf8a24');
+    }
+    this.deflected += knocked;
+    if (knocked) SFX.deflect();
     this.emp = 0.45;
     this.shake = 16;
     SFX.bell();
-    this.setBanner(T('bellRung'), '#cf8a24');
+    this.setBanner(T(knocked ? 'shellKnocked' : 'bellRung'), '#cf8a24');
   }
 
   /* THE RALLY HORN. Everyone works the cranks twice as fast for a few seconds. */
@@ -3563,25 +3663,28 @@ class Game {
 
     this.drawBackdrop();
 
-    /* Frame the stack, the piece in the air and a few rows of headroom. The
-       load line joins the frame once the stack gets within lineWarnRows of it,
-       which is when there is something to plan around; before that, keeping
-       it in view only shrank the yard into a corner of a wide window. */
-    const stackTop = this.topRow();
-    let top = Math.max(stackTop + 2, CFG.viewMinRows, this.piece ? this.piece.cy + 1 : 0);
-    if (stackTop + CFG.lineWarnRows >= CFG.overheatRow) top = Math.max(top, CFG.overheatRow + 1);
-    const needH = (top + 3) * CFG.cell;
-    const worldW = CFG.coreW + CFG.cols * CFG.cell + CFG.approach + 20;
+    /* The whole field at once: the load line always in view with a row to
+       spare over it (or over the stack and the piece, once they pass it), and
+       the full run-up to the Rift. You read the wall and the machines on it
+       in one look instead of panning your eyes across a close-up. */
+    const top = Math.max(this.topRow() + 2, CFG.overheatRow + 1,
+                         this.piece ? this.piece.cy + 2 : 0);
+    const needH = (top + CFG.viewHeadroom) * CFG.cell;
+    const worldL = -CFG.coreW - CFG.viewPadL;
+    const worldR = CFG.cols * CFG.cell + CFG.approach + 40;
+    const worldW = worldR - worldL;
     /* Width always fits: the run-up has to be visible or the machines arrive
        from off-screen. Height is allowed to stop zooming out at minZoom, since
        a tall tower is the player's own doing. */
-    const fitW = (CW - 20) / worldW;
+    const fitW = (CW - 24) / worldW;
     const fitH = Math.max(CFG.minZoom, (CH - 74) / needH);
     const target = Math.min(CFG.maxZoom, fitW, fitH);
     if (!this.viewScale) this.viewScale = target;
     this.viewScale += (target - this.viewScale) * ease(dt, 4.5);
     this.scale = this.viewScale;
-    this.originX = 16 + CFG.coreW * this.scale;
+    // whatever width the field does not need is split evenly around it
+    const pad = Math.max(12, (CW - worldW * this.scale) / 2);
+    this.originX = pad - worldL * this.scale;
     this.originY = CH - 24;
     this.applyCoachCamera(dt);
 
@@ -3596,6 +3699,7 @@ class Game {
     ctx.scale(this.scale, this.scale);
 
     this.drawGround();
+    this.drawFarmer();
     this.drawCore();
     this.drawGrid();
     this.drawPiece();
@@ -3626,58 +3730,235 @@ class Game {
     }
   }
 
-  /* A summer afternoon: sky, a hazy ridge in the west, then the meadow.
-     Everything here is static or slow — it must never pull the eye away from
-     the wall. The machines always come out of that ridge on the right. */
+  /* THE BACKDROP. Read from left to right it tells the whole game: the town
+     you are defending, its fields, the Heart and the wall in front of it, the
+     open run-up, and the dark ridge the machines walk out of.
+
+     It is painted to stay out of the way. Everything behind the field is pale
+     and low in contrast, pushed back by haze; the only strong shapes on screen
+     belong to the wall and the machines. The town and the fields hang off the
+     Heart's position and the ridge off the Rift's, so they stay where they
+     belong when the window is wide, narrow, or the training camera leans in. */
   drawBackdrop() {
     const horizon = this.originY !== undefined ? this.originY : CH - 24;
+    const heartX = this.sx ? this.sx(-CFG.coreW) : 60;
+    const riftX = this.sx ? this.sx(CFG.cols * CFG.cell + CFG.approach) : CW * .8;
+    const t = this.time || 0;
+    // one unit of backdrop size, from the size of the window rather than the
+    // zoom (far things do not grow when the camera leans in), and held down on
+    // a narrow phone field, where a full-size ridge swallowed the run-up
+    const u = Math.max(.5, Math.min(1.35, horizon / 430, CW / 1000));
 
+    // sky: deeper overhead, warm and pale at the horizon
     const sky = ctx.createLinearGradient(0, 0, 0, horizon);
-    sky.addColorStop(0, '#6fb4dc');
-    sky.addColorStop(.62, '#a9d8e9');
-    sky.addColorStop(1, '#dcecdc');
+    sky.addColorStop(0, '#7db7d8');
+    sky.addColorStop(.55, '#b6dbe8');
+    sky.addColorStop(1, '#e8efd8');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, CW, horizon + 2);
 
-    // sun, high and to the left, behind the settlement
-    ctx.fillStyle = 'rgba(255,250,220,.5)';
-    ctx.beginPath(); ctx.arc(CW * .14, horizon * .2, 52, 0, 6.3); ctx.fill();
-    ctx.fillStyle = 'rgba(255,252,232,.85)';
-    ctx.beginPath(); ctx.arc(CW * .14, horizon * .2, 21, 0, 6.3); ctx.fill();
+    // sun, high over the town
+    const sunX = Math.max(60, Math.min(CW * .3, heartX - 140 * u)), sunY = horizon * .2;
+    ctx.fillStyle = 'rgba(255,248,222,.45)';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 54 * u, 0, 6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,252,236,.9)';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 22 * u, 0, 6.3); ctx.fill();
 
     // slow clouds
-    ctx.fillStyle = 'rgba(255,255,255,.5)';
-    for (let i = 0; i < 3; i++) {
-      const cx = ((this.time * (5 + i * 2) + i * 420) % (CW + 300)) - 150;
-      const cy = horizon * (.16 + i * .13);
-      const r = 22 + i * 9;
-      ellipse(cx, cy, r * 1.9, r * .6); ctx.fill();
-      ellipse(cx + r * .7, cy - r * .26, r * 1.1, r * .5); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.48)';
+    for (let i = 0; i < 4; i++) {
+      const cx = ((t * (4 + i * 1.7) + i * 390) % (CW + 320)) - 160;
+      const cy = horizon * (.12 + i * .1);
+      const r = (20 + i * 7) * u;
+      ellipse(cx, cy, r * 1.9, r * .55); ctx.fill();
+      ellipse(cx + r * .7, cy - r * .24, r * 1.05, r * .48); ctx.fill();
     }
 
-    // the western ridge the machines come over — hazy, far away, on the right
-    const ridgeY = horizon - 46;
-    ctx.fillStyle = 'rgba(126,150,140,.42)';
+    /* the ridge: the machines' side. Slate, jagged, and taller than anything
+       on the town's side, with the harvest's smoke leaning off it */
+    const rx0 = Math.max(riftX - 200 * u, Math.min(riftX - 60 * u, CW * .6));
+    const ridge = (x0, hMul, fill, step) => {
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(x0, horizon);
+      for (let x = x0, i = 0; x <= CW + 60; x += step * u, i++) {
+        const peak = (i % 3 === 1 ? 100 : i % 3 === 2 ? 64 : 80) * hMul * u * (1 + .16 * Math.sin(i * 2.3 + x0));
+        ctx.lineTo(x + step * .5 * u, horizon - peak);
+        ctx.lineTo(x + step * u, horizon - peak * .52 - 8 * u);
+      }
+      ctx.lineTo(CW + 60, horizon); ctx.closePath(); ctx.fill();
+    };
+    ridge(rx0, 1, 'rgba(126,130,154,.36)', 36);
+    ridge(rx0 + 40 * u, .55, 'rgba(104,106,128,.3)', 26);   // the foothills, nearer and darker
+    // the harvest's smoke, a soft haze leaning off the ridge towards the east
+    const puff = (x, y, r, a) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(84,82,98,' + a.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(84,82,98,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    for (let p = 0; p < 2; p++) {
+      const sx0 = Math.min(CW - 30 * u, riftX + (70 + p * 120) * u);
+      for (let i = 0; i < 6; i++) {
+        const life = (t * .05 + i / 6 + p * .37) % 1;
+        puff(sx0 + life * 110 * u, horizon - (70 + life * 170) * u, (26 + life * 52) * u, .16 * Math.sin(Math.PI * life));
+      }
+    }
+
+    // far hills on the valley side, pale blue-green
+    ctx.fillStyle = 'rgba(160,196,160,.55)';
     ctx.beginPath();
-    ctx.moveTo(CW, horizon);
-    ctx.lineTo(CW, ridgeY - 16);
-    for (let x = CW; x >= CW * .34; x -= 46) {
-      ctx.lineTo(x - 23, ridgeY - 6 + Math.sin(x * .05) * 12);
-      ctx.lineTo(x - 46, ridgeY + 10 + Math.cos(x * .04) * 9);
-    }
-    ctx.lineTo(CW * .34, horizon);
-    ctx.closePath(); ctx.fill();
+    ctx.moveTo(-10, horizon);
+    for (let x = -10; x <= riftX; x += 24)
+      ctx.lineTo(x, horizon - (34 + Math.sin(x * .011 + 1.1) * 14 + Math.sin(x * .031) * 6) * u);
+    ctx.lineTo(riftX, horizon); ctx.closePath(); ctx.fill();
 
-    // far treeline and meadow haze
-    ctx.fillStyle = 'rgba(108,146,86,.38)';
+    this.drawTown(heartX, horizon, u);
+
+    // near meadow haze along the horizon, over the whole width
+    ctx.fillStyle = 'rgba(126,164,96,.34)';
     ctx.beginPath();
     ctx.moveTo(0, horizon);
     for (let x = 0; x <= CW; x += 30)
-      ctx.lineTo(x, horizon - 13 - Math.sin(x * .028 + 1.4) * 7);
+      ctx.lineTo(x, horizon - (9 + Math.sin(x * .028 + 1.4) * 4) * u);
     ctx.lineTo(CW, horizon); ctx.closePath(); ctx.fill();
 
     ctx.fillStyle = this.sector.tint;
     ctx.fillRect(0, 0, CW, CH);
+  }
+
+  /* THE TOWN the Heart keeps alive: a walled market town on a rise, its bell
+     tower (the same bell you ring), a mill on the far hill, smoke from the
+     chimneys, and fields running down to the wall. Drawn once per frame from a
+     fixed plan, right to left from the gate by the Heart. On a field too
+     narrow to leave room beside the Heart (a phone), it moves back and sits
+     small and faint on the horizon behind the yard instead. */
+  drawTown(heartX, horizon, u) {
+    const near = heartX > 150;
+    const k = near ? u : u * .62;
+    const R = near ? heartX - 12 * u : this.sx(CFG.cols * CFG.cell * .92);
+    if (R < 20) return;
+    const t = this.time || 0;
+    const X = x => R + x * k, Y = y => horizon - y * k;
+    // distance haze, mixed into every colour rather than laid over as a sheet,
+    // so the sky between the roofs stays sky
+    const hz = near ? .3 : .55;
+    const H = c => mixHex(c, '#e2ecea', hz);
+    ctx.save();
+
+    // the rise the town stands on, striped with fields down to the wall
+    ctx.fillStyle = H('#a9c485');
+    ctx.beginPath();
+    ctx.moveTo(X(40), horizon);
+    ctx.quadraticCurveTo(X(-150), Y(46), X(-420), Y(40));
+    ctx.quadraticCurveTo(X(-560), Y(36), X(-700), Y(22));
+    ctx.lineTo(X(-700), horizon); ctx.closePath(); ctx.fill();
+    const fields = ['#d8c078', '#b9cc7c', '#e1cd8a', '#a7c275', '#d4b86c'];
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = H(fields[i]);
+      ctx.beginPath();
+      const x0 = -40 - i * 118, x1 = x0 - 104;
+      ctx.moveTo(X(x0), Y(6 + i * 1.5)); ctx.lineTo(X(x1), Y(8 + i * 2));
+      ctx.lineTo(X(x1 - 6), Y(15 + i * 2)); ctx.lineTo(X(x0 - 4), Y(13 + i * 1.5));
+      ctx.closePath(); ctx.fill();
+    }
+
+    // the mill on the far hill, sails turning slowly
+    const mx = X(-600), my = Y(34);
+    ctx.fillStyle = H('#d9cdb0');
+    ctx.beginPath();
+    ctx.moveTo(mx - 10 * k, my); ctx.lineTo(mx - 6 * k, my - 46 * k);
+    ctx.lineTo(mx + 6 * k, my - 46 * k); ctx.lineTo(mx + 10 * k, my); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = H('#9d6f58');
+    ctx.beginPath();
+    ctx.moveTo(mx - 9 * k, my - 45 * k); ctx.lineTo(mx, my - 56 * k); ctx.lineTo(mx + 9 * k, my - 45 * k);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = H('#8a7a64'); ctx.lineWidth = Math.max(1, 2.2 * k);
+    const hub = [mx, my - 42 * k], spin = calm ? .5 : t * .7;
+    for (let i = 0; i < 4; i++) {
+      const a = spin + i * Math.PI / 2;
+      ctx.beginPath(); ctx.moveTo(hub[0], hub[1]);
+      ctx.lineTo(hub[0] + Math.cos(a) * 30 * k, hub[1] + Math.sin(a) * 30 * k); ctx.stroke();
+      ctx.fillStyle = 'rgba(236,228,210,.9)';
+      ctx.save(); ctx.translate(hub[0], hub[1]); ctx.rotate(a);
+      ctx.fillRect(10 * k, 0, 19 * k, 5.5 * k); ctx.restore();
+    }
+
+    // houses behind the wall: gables in weathered tile, whitewash and ochre
+    const houses = [
+      [-58, 30, 30, '#e9ddc2', '#b8694c'], [-96, 26, 38, '#dfcd9f', '#9d5c43'],
+      [-134, 38, 28, '#ece2c9', '#a9674b'], [-222, 34, 34, '#e3d3ab', '#b0735a'],
+      [-262, 28, 26, '#eadfc4', '#9a5a44'], [-306, 42, 36, '#dccb9e', '#ab6a4f'],
+      [-350, 30, 30, '#e8dcc0', '#a35f46'], [-392, 36, 27, '#e2d2aa', '#b36f55'],
+      [-436, 30, 33, '#ebe0c6', '#9c6049'], [-478, 34, 25, '#dfcfa4', '#aa6b50'],
+    ];
+    const base = 14;                       // the houses stand on the rise, above the wall
+    for (const [x, w, h, wall, roof] of houses) {
+      ctx.fillStyle = H(wall);
+      ctx.fillRect(X(x - w), Y(base + h), w * k, h * k);
+      ctx.fillStyle = H(roof);
+      ctx.beginPath();
+      ctx.moveTo(X(x - w - 3), Y(base + h)); ctx.lineTo(X(x - w / 2), Y(base + h + w * .55));
+      ctx.lineTo(X(x + 3), Y(base + h)); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(92,72,52,.55)';
+      const wy = base + h * .62;
+      ctx.fillRect(X(x - w * .72), Y(wy), 4.5 * k, 5.5 * k);
+      ctx.fillRect(X(x - w * .36), Y(wy), 4.5 * k, 5.5 * k);
+    }
+    // chimney smoke, rising and thinning
+    for (const [hx, hh] of [[-80, 38], [-290, 36], [-420, 33]]) {
+      for (let i = 0; i < 4; i++) {
+        const life = ((t * .18 + i / 4 + hx * .001) % 1 + 1) % 1;
+        const x = X(hx + life * 18), y = Y(base + hh + 14 + life * 46), r = (4 + life * 10) * k;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(250,248,244,' + (.55 * Math.sin(Math.PI * life)).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(250,248,244,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    }
+
+    // the bell tower: the bell you ring hangs in that open top
+    const bx = -176, bw = 26;
+    ctx.fillStyle = H('#d3cbb7');
+    ctx.fillRect(X(bx - bw), Y(base + 92), bw * k, 92 * k);
+    ctx.fillStyle = 'rgba(80,66,50,.6)';
+    ctx.fillRect(X(bx - bw * .72), Y(base + 84), bw * .44 * k, 13 * k);
+    ctx.fillStyle = H('#c99a3a');
+    ctx.beginPath(); ctx.arc(X(bx - bw / 2), Y(base + 76), 4.2 * k, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = H('#6f7c93');
+    ctx.beginPath();
+    ctx.moveTo(X(bx - bw - 3), Y(base + 92)); ctx.lineTo(X(bx - bw / 2), Y(base + 132));
+    ctx.lineTo(X(bx + 3), Y(base + 92)); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = H('#6f7c93'); ctx.lineWidth = Math.max(1, 1.5 * k);
+    ctx.beginPath(); ctx.moveTo(X(bx - bw / 2), Y(base + 132)); ctx.lineTo(X(bx - bw / 2), Y(base + 142)); ctx.stroke();
+
+    // round trees between the roofs
+    ctx.fillStyle = H('#86ad62');
+    for (const [x, r] of [[-150, 13], [-205, 11], [-330, 14], [-455, 12], [-520, 15]]) {
+      ctx.beginPath(); ctx.arc(X(x), Y(base + r * 1.6), r * k, 0, 6.3); ctx.fill();
+    }
+
+    // the town wall, crenellated, with the gate by the Heart
+    const wallL = -540;
+    ctx.fillStyle = H('#cfc5ad');
+    ctx.fillRect(X(wallL), Y(20), (-wallL) * k, 20 * k);
+    ctx.fillStyle = 'rgba(96,82,60,.28)';
+    ctx.fillRect(X(wallL), Y(20), (-wallL) * k, 3 * k);
+    ctx.fillStyle = H('#cfc5ad');
+    for (let x = wallL; x < -2; x += 12) ctx.fillRect(X(x), Y(26), 6 * k, 6 * k);
+    // gatehouse
+    ctx.fillStyle = H('#c7bca2');
+    ctx.fillRect(X(-40), Y(42), 38 * k, 42 * k);
+    for (let x = -40; x < -4; x += 10) ctx.fillRect(X(x), Y(48), 6 * k, 6 * k);
+    ctx.fillStyle = 'rgba(70,56,40,.55)';
+    ctx.beginPath();
+    ctx.moveTo(X(-30), horizon); ctx.lineTo(X(-30), Y(16));
+    ctx.arc(X(-21), Y(16), 9 * k, Math.PI, 0);
+    ctx.lineTo(X(-12), horizon); ctx.closePath(); ctx.fill();
+
+    ctx.restore();
   }
 
   /* THE TRAINING CAMERA. While a card is about something on the field, the
@@ -3748,8 +4029,19 @@ class Game {
     } else return null;
     const a = coachFreeArea();
     const fw = Math.max(80, a.r - a.l), fh = Math.max(80, a.b - a.t);
-    const sc = Math.max(CFG.minZoom, Math.min(CFG.coachMaxZoom, fw / (r - l), fh / (tp - b)));
-    return { x: (l + r) / 2, y: (b + tp) / 2, s: sc, px: (a.l + a.r) / 2, py: (a.t + a.b) / 2 };
+    let sc = Math.max(CFG.minZoom, Math.min(CFG.coachMaxZoom, fw / (r - l), fh / (tp - b)));
+    /* The Heart gets a real close-up once. The yard and the tear only lean in
+       a little: those cards are read while you build or watch, and a close-up
+       there hides the rest of the field. */
+    const base = this.viewScale || sc;
+    if (s.cam === 'board') sc = Math.min(sc, base * 1.35);
+    else if (s.cam === 'rift') sc = Math.min(sc, base * 1.6);
+    /* When the framed thing is shorter than the space, stand it on the bottom
+       of the frame rather than floating it in the middle: these are all
+       things on the ground, and a band of soil under them reads as a gap. */
+    const rectH = (tp - b) * sc;
+    const py = rectH < fh ? a.b - rectH / 2 : (a.t + a.b) / 2;
+    return { x: (l + r) / 2, y: (b + tp) / 2, s: sc, px: (a.l + a.r) / 2, py };
   }
 
   /* world → screen */
@@ -3838,6 +4130,71 @@ class Game {
       ctx.lineTo(x * CFG.cell, -t * CFG.cell);
       ctx.stroke();
     }
+  }
+
+  /* THE FARMER. Whoever is holding this valley together: straw hat, overalls,
+     a pitchfork, standing at the town gate beside the Heart and facing the
+     ridge. Idle most of the time, he flinches when the Heart takes a hit and
+     throws the fork up when the bell goes. World space, so he sits on the
+     turf and scales with everything else. */
+  drawFarmer() {
+    const fx = -CFG.coreW - 20;
+    const t = this.time || 0;
+    const breath = calm ? 0 : Math.sin(t * 2.1) * .5;
+    const flinch = this.hurtFlash > 0 && !calm ? Math.sin(t * 60) * 1.2 * this.hurtFlash : 0;
+    const cheer = Math.min(1, (this.emp || 0) * 3);
+    const x = fx + flinch;
+    ctx.save();
+    // shadow
+    ctx.fillStyle = 'rgba(40,30,20,.22)';
+    ellipse(x, 0, 12, 2.6); ctx.fill();
+    // boots and overall legs
+    ctx.fillStyle = '#5a3d26';
+    ctx.fillRect(x - 6.5, -4, 5.5, 4); ctx.fillRect(x + 1, -4, 5.5, 4);
+    ctx.fillStyle = '#3f6aa0';
+    ctx.fillRect(x - 6, -19, 5, 15.5); ctx.fillRect(x + 1, -19, 5, 15.5);
+    const by = breath;                         // the upper body rises and falls
+    // shirt, bib and straps
+    ctx.fillStyle = '#c4533c';
+    rr(x - 7.5, -34 + by, 15, 16, 3); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,40,28,.5)'; ctx.lineWidth = .8;
+    ctx.beginPath(); ctx.moveTo(x - 7.5, -29 + by); ctx.lineTo(x + 7.5, -29 + by); ctx.stroke();
+    ctx.fillStyle = '#3f6aa0';
+    ctx.fillRect(x - 5, -27 + by, 10, 9);
+    ctx.fillRect(x - 5, -33 + by, 2, 6); ctx.fillRect(x + 3, -33 + by, 2, 6);
+    // the far arm, hanging
+    ctx.fillStyle = '#b44a35';
+    rr(x - 10, -32 + by, 3.6, 12, 1.6); ctx.fill();
+    ctx.fillStyle = '#e9b995';
+    ctx.beginPath(); ctx.arc(x - 8.2, -19.5 + by, 2, 0, 6.3); ctx.fill();
+    // the pitchfork, planted, or thrown up when the bell rings
+    const lift = cheer * 9;
+    const px = x + 12;
+    ctx.strokeStyle = '#8b5e34'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(px, 2 - lift); ctx.lineTo(px, -54 - lift); ctx.stroke();
+    ctx.strokeStyle = '#8e959c'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(px - 4, -54 - lift); ctx.lineTo(px + 4, -54 - lift);
+    for (const dx of [-4, 0, 4]) { ctx.moveTo(px + dx, -54 - lift); ctx.lineTo(px + dx, -62 - lift); }
+    ctx.stroke();
+    // the near arm, holding the fork
+    ctx.fillStyle = '#c4533c';
+    rr(x + 5, -31 + by - lift * .6, 7, 3.6, 1.6); ctx.fill();
+    ctx.fillStyle = '#e9b995';
+    ctx.beginPath(); ctx.arc(px, -29.5 + by - lift * .6, 2.1, 0, 6.3); ctx.fill();
+    // head, looking at the ridge
+    ctx.beginPath(); ctx.arc(x, -39.5 + by, 5.6, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#3a2a1c';
+    const blink = !calm && (t % 4.2) < .12;
+    ctx.fillRect(x + 2.4, -40.5 + by, 1.4, blink ? .4 : 1.6);
+    // straw hat
+    ctx.fillStyle = '#e2c066';
+    ellipse(x, -44 + by, 10.5, 2.3); ctx.fill();
+    ctx.fillStyle = '#d8b457';
+    rr(x - 5.5, -50.5 + by, 11, 7, 2.5); ctx.fill();
+    ctx.fillStyle = '#a8452f';
+    ctx.fillRect(x - 5.5, -45.8 + by, 11, 1.6);
+    ctx.restore();
   }
 
   /* THE HEART — a stone wellhead over the old spring. Its water level is
@@ -4760,6 +5117,14 @@ class Game {
       const y = this.sy(CFG.overheatRow * cell);
       this.coachBox(this.sx(0), y - 9, boardW * this.scale, 18);
       lab = { x: this.sx(boardW) + 16, y, r: 0, side: 'right', ax: this.sx(boardW / 2) };
+    } else if (s.spot === 'shell') {
+      const b = this.barrages.find(x => !x.dead);
+      if (b) {
+        const sh = this.shellAt(b);
+        const r = Math.max(6, 8.5 * this.scale * this.readK) * 2.2 + 8;
+        this.coachRing(sh.x, sh.y, r);
+        lab = { x: sh.x + r + 14, y: sh.y, r: 0, side: 'right', ax: sh.x, pt: true };
+      }
     } else if (s.spot === 'store' && this.holdBox) {
       const b = this.holdBox;
       this.coachBox(b.x, b.y, b.w, b.h);
@@ -4790,7 +5155,12 @@ class Game {
     const w = ctx.measureText(txt).width + 34, h = fs + 18;
     const free = coachFreeArea();
     let cx = at.x, cy, notch = 'down';
-    if (at.side === 'right' && at.x + w > Math.min(CW - 8, free.r) && at.ax !== undefined) {
+    const roomR = at.x + w <= Math.min(CW - 8, free.r);
+    // the mirror spot on the other side of the target, for a sign that hangs off a point
+    const leftX = at.ax !== undefined && at.r === 0 && at.ax !== at.x ? at.ax - (at.x - at.ax) - w / 2 : null;
+    if (at.side === 'right' && !roomR && leftX !== null && leftX - w / 2 >= 8 && at.pt) {
+      cx = leftX; cy = at.y; notch = 'right';
+    } else if (at.side === 'right' && !roomR && at.ax !== undefined) {
       // no room beside it on a narrow field: stand over the middle of it instead
       cx = at.ax; cy = at.y - h / 2 - 16; notch = 'down';
     } else if (at.side === 'right') { cx = at.x + w / 2; cy = at.y; notch = 'left'; }
@@ -4802,7 +5172,7 @@ class Game {
     }
     const minX = w / 2 + 8, maxX = Math.max(minX, Math.min(CW - 8, free.r) - w / 2);
     const shifted = Math.max(minX, Math.min(maxX, cx));
-    if (notch === 'left' && shifted !== cx) notch = 'none';
+    if ((notch === 'left' || notch === 'right') && shifted !== cx) notch = 'none';
     cx = shifted;
     cy = Math.max(h / 2 + 6, Math.min(CH - h / 2 - 6, cy));
     if (!calm) cy += Math.sin(this.time * 2.6) * 2.2;
@@ -4821,6 +5191,7 @@ class Game {
     if (notch === 'down') { ctx.moveTo(-9, h / 2 - 1); ctx.lineTo(9, h / 2 - 1); ctx.lineTo(0, h / 2 + 10); }
     else if (notch === 'up') { ctx.moveTo(-9, -h / 2 + 1); ctx.lineTo(9, -h / 2 + 1); ctx.lineTo(0, -h / 2 - 10); }
     else if (notch === 'left') { ctx.moveTo(-w / 2 + 1, -9); ctx.lineTo(-w / 2 + 1, 9); ctx.lineTo(-w / 2 - 10, 0); }
+    else if (notch === 'right') { ctx.moveTo(w / 2 - 1, -9); ctx.lineTo(w / 2 - 1, 9); ctx.lineTo(w / 2 + 10, 0); }
     ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#2f6440';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -5685,7 +6056,18 @@ const TUT_STEPS = [
      so the bar only becomes callable once the card that explains it is up. */
   { k: 'tu_call', live: true, el: '#waveBar', check: g => g.phase === 'fight' },
   { k: 'tu9', live: true, spot: 'rift', cam: 'rift', label: 'rift' },
-  { k: 'tu_bell', live: true, el: '#abBell', check: g => g.bells > 0 },
+  /* The bell's real job is knocking shells out of the air, and the practice
+     wave is far too early for the siege guns, so the card fires one itself:
+     a slow shell down a column of the wall, the bell lit, the shell named on
+     the field. If it lands before the bell is rung, another one comes. */
+  { k: 'tu_bell', live: true, el: '#abBell', spot: 'shell', label: 'shell', cam: 'board',
+    check: g => g.deflected > 0,
+    enter: g => { g.cdBell = 0; tutShell(g); },
+    tick: (g, dt) => {
+      if (g.barrages.length || g.deflected) { g.tutShellWait = 0; return; }
+      g.tutShellWait = (g.tutShellWait || 0) + dt;
+      if (g.tutShellWait > 1.2) { g.tutShellWait = 0; tutShell(g); }
+    } },
   { k: 'tu_rally', live: true, el: '#abRally', check: g => g.rallies > 0 },
   /* No check on mending: with an undamaged wall the price is zero and the
      button refuses, so waiting for a mend that cannot happen would be the same
@@ -5725,7 +6107,19 @@ const TUT_SLOW = 0.3;
 function tutReadTime(step) {
   const raw = String(TT(step.k + '_d') || '').replace(/<[^>]*>/g, ' ');
   const words = raw.split(/\s+/).filter(Boolean).length;
-  return Math.max(5, Math.min(13, 2 + words / 2));
+  return Math.max(4, Math.min(10, 1.5 + words / 2));
+}
+
+/* One slow training shell, dropped on a column that has something standing
+   in it (a shell on an empty column teaches nothing), aimed at the middle of
+   the wall when there is no wall yet. */
+function tutShell(g) {
+  if (!g || g.gameOver) return;
+  const cols = [];
+  for (let x = 0; x < CFG.cols; x++) if (g.grid[0] && g.grid[0][x]) cols.push(x);
+  const col = cols.length ? cols[Math.floor(cols.length / 2)] : Math.floor(CFG.cols / 2);
+  g.barrages.push({ col, t: 6, warn: 6, dead: false });
+  SFX.incoming();
 }
 
 /* Real seconds are multiplied by this before the game sees them. */
@@ -5853,6 +6247,7 @@ function tutorialTick(dt) {
     renderReadWindow();
   }
   const s = TUT_STEPS[t.step];
+  if (s.tick && !game.paused && !storyOpen && !choiceOpen) s.tick(game, dt);
   if (s.check && s.check(game)) tutorialGo(t.step + 1);
 }
 
